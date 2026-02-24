@@ -3,38 +3,60 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class TelegramService
 {
-    /**
-     * TODO [PHASE 3 - Syahru]: Implementasi sesuai TASK S1
-     *
-     * Gunakan TELEGRAM_BOT_TOKEN dari .env
-     * Return true jika berhasil, false jika gagal
-     * No retry di layer ini (retry ditangani Job)
-     */
-
-    // TODO [PHASE 3 - Syahru]: Inject bot token dari config/services.php
-    // protected string $botToken;
+    protected string $botToken;
+    protected string $apiUrl;
 
     public function __construct()
     {
-        // TODO [PHASE 3 - Syahru]: $this->botToken = config('services.telegram.bot_token');
+        $this->botToken = config('services.telegram.bot_token', '');
+        $this->apiUrl   = config('services.telegram.api_url', 'https://api.telegram.org');
     }
 
     /**
-     * Send a message to a Telegram chat.
+     * Send a Markdown message to a Telegram chat.
      *
      * @param  string  $chatId   Telegram chat_id penerima
-     * @param  string  $message  Pesan yang akan dikirim
+     * @param  string  $message  Pesan yang akan dikirim (plain / Markdown)
      * @return bool
-     *
-     * TODO [PHASE 3 - Syahru]: Implementasi call ke Telegram Bot API
-     * Endpoint: https://api.telegram.org/bot{TOKEN}/sendMessage
      */
     public function sendMessage(string $chatId, string $message): bool
     {
-        // TODO [PHASE 3 - Syahru]: Implementasi HTTP call ke Telegram di sini
-        return false;
+        if (empty($this->botToken)) {
+            Log::warning('TelegramService: TELEGRAM_BOT_TOKEN is not configured');
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(10)->post(
+                "{$this->apiUrl}/bot{$this->botToken}/sendMessage",
+                [
+                    'chat_id'    => $chatId,
+                    'text'       => $message,
+                    'parse_mode' => 'Markdown',
+                ]
+            );
+
+            if ($response->successful() && ($response->json('ok') === true)) {
+                return true;
+            }
+
+            Log::warning('TelegramService: API error', [
+                'chat_id'  => $chatId,
+                'status'   => $response->status(),
+                'response' => $response->json(),
+            ]);
+
+            return false;
+        } catch (\Throwable $e) {
+            Log::error('TelegramService: Exception', [
+                'chat_id' => $chatId,
+                'error'   => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 }

@@ -12,8 +12,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // TODO [PHASE 1 - Andika]: Exempt webhook route dari CSRF (jika diperlukan)
-        // $middleware->validateCsrfTokens(except: ['api/webhook/payment']);
+        // Trust all proxies (ngrok, reverse proxy) — fixes 419 PAGE EXPIRED via HTTPS tunnel
+        $middleware->trustProxies(at: '*');
+
+        // Exempt webhook dari CSRF
+        $middleware->validateCsrfTokens(except: ['api/webhook/payment']);
+
+        // Redirect guest (belum login) ke login; user sudah login ke home
+        $middleware->redirectGuestsTo(fn () => route('login'));
+        $middleware->redirectUsersTo(fn () => route('home'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

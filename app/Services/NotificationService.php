@@ -1,0 +1,138 @@
+<?php
+
+namespace App\Services;
+
+use App\Jobs\SendTelegramNotification;
+use App\Models\Notification;
+use App\Models\Order;
+use Illuminate\Support\Carbon;
+
+class NotificationService
+{
+    /**
+     * Fire a Telegram notification for an order event.
+     * Creates a Notification record then dispatches the job.
+     */
+    public function notifyOrderStatus(Order $order, string $event): void
+    {
+        $user = $order->customer;
+
+        if (! $user) {
+            return;
+        }
+
+        $message = $this->buildMessage($order, $event);
+
+        if (! $message) {
+            return;
+        }
+
+        $notification = Notification::create([
+            'user_id'                    => $user->id,
+            'order_id'                   => $order->id,
+            'event_type'                 => $event,
+            'channel'                    => 'telegram',
+            'recipient_chat_id_snapshot' => $user->telegram_chat_id,
+            'message_body'               => $message,
+            'status'                     => 'queued',
+        ]);
+
+        SendTelegramNotification::dispatch($notification->id);
+    }
+
+    /**
+     * Build the Telegram message text based on event type.
+     */
+    private function buildMessage(Order $order, string $event): ?string
+    {
+        $customer = $order->customer;
+        $name     = $customer?->name ?? 'Pelanggan';
+        $ordNum   = $order->order_number;
+        $total    = 'Rp ' . number_format((float) $order->total_amount, 0, ',', '.');
+        $date     = Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+
+        return match ($event) {
+            'payment.confirmed' =>
+                "*TDR-HPZ Store*, [{$date}]\n" .
+                "✅ *Pembayaran Dikonfirmasi*\n\n" .
+                "Halo {$name},\n\n" .
+                "Pembayaran untuk pesanan *{$ordNum}* telah kami terima.\n" .
+                "Total: *{$total}*\n\n" .
+                "Pesanan Anda sedang kami proses. Kami akan mengirimkan notifikasi saat barang dikirim.\n\n" .
+                "Terima kasih telah berbelanja di store.tdr-hpz.com! 🚀",
+
+            'order.processing' =>
+                "*TDR-HPZ Store*, [{$date}]\n" .
+                "⚙️ *Pesanan Diproses*\n\n" .
+                "Halo {$name},\n\n" .
+                "Pesanan *{$ordNum}* sedang dalam proses pengemasan.\n\n" .
+                "Kami akan segera mengirimkan pesanan Anda. Nantikan informasi pengiriman selanjutnya!",
+
+            'order.shipped' =>
+                "*TDR-HPZ Store*, [{$date}]\n" .
+                "📦 *Pesanan Dikirim*\n\n" .
+                "Halo {$name},\n\n" .
+                "Pesanan *{$ordNum}* telah dikirim via *{$order->shipping_provider}*.\n" .
+                ($order->tracking_number
+                    ? "Nomor Resi: `{$order->tracking_number}`\n\n"
+                    : "\n") .
+                "Silakan pantau pengiriman Anda. Terima kasih! 🙏",
+
+            'order.delivered' =>
+                "*TDR-HPZ Store*, [{$date}]\n" .
+                "🎉 *Pesanan Selesai*\n\n" .
+                "Halo {$name},\n\n" .
+                "Pesanan *{$ordNum}* telah selesai.\n\n" .
+                "Terima kasih telah berbelanja di store.tdr-hpz.com! 🚀",
+
+            'order.cancelled' =>
+                "*TDR-HPZ Store*, [{$date}]\n" .
+                "❌ *Pesanan Dibatalkan*\n\n" .
+                "Halo {$name},\n\n" .
+                "Pesanan *{$ordNum}* telah dibatalkan.\n\n" .
+                "Jika ada pertanyaan, silakan hubungi kami.",
+
+            default => null,
+        };
+    }
+
+    /**
+     * Notify an affiliate when they earn a commission.
+     */
+    public function notifyAffiliateCommission(\App\Models\AffiliateConversion $conversion): void
+    {
+        $affiliate = $conversion->affiliate()->with('user')->first();
+        $chatId    = $affiliate?->user?->telegram_chat_id;
+
+        if (! $chatId) {
+            return;
+        }
+
+        $order      = $conversion->order;
+        $affName    = $affiliate->user->name;
+        $ordNum     = $order?->order_number ?? '—';
+        $commission = 'Rp ' . number_format((float) $conversion->commission_amount, 0, ',', '.');
+        $rate       = $conversion->commission_rate;
+        $date       = \Illuminate\Support\Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+
+        $message = "*TDR-HPZ Affiliate* 🎉\n\n"
+                 . "*{$affName}*, kamu baru saja mendapatkan komisi!\n\n"
+                 . "📦 Order: *{$ordNum}*\n"
+                 . "💰 Komisi ({$rate}%): *{$commission}*\n"
+                 . "⏰ Waktu: {$date}\n\n"
+                 . "Komisi akan masuk ke saldo setelah pesanan selesai (delivered). Keep sharing! 🚀";
+
+        // Create notification record
+        $notification = \App\Models\Notification::create([
+            'user_id'                    => $affiliate->user_id,
+            'order_id'                   => $conversion->order_id,
+            'event_type'                 => 'affiliate.commission',
+            'channel'                    => 'telegram',
+            'recipient_chat_id_snapshot' => $chatId,
+            'message_body'               => $message,
+            'status'                     => 'queued',
+        ]);
+
+        \App\Jobs\SendTelegramNotification::dispatch($notification->id);
+    }
+}
