@@ -21,5 +21,10 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // TODO [PHASE 1 - Andika]: Jalankan AffiliateSeeder setelah migrations selesai
+        $this->call([
+            AffiliateSeeder::class,
+        ]);
     }
 }

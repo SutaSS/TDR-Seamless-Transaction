@@ -42,4 +42,10 @@ return [
         'is_production'  => env('MIDTRANS_IS_PRODUCTION', false),
     ],
 
+    // TODO [PHASE 3 - Syahru]: Telegram Bot config
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'api_url'   => 'https://api.telegram.org',
+    ],
+
 ];
