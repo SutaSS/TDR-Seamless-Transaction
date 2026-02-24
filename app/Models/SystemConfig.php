@@ -7,15 +7,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SystemConfig extends Model
 {
-    // TODO [PHASE 1 - Andika]: Define $fillable sesuai kolom tabel system_configs
-    protected $fillable = [];
+    protected $fillable = [
+        'config_key',
+        'config_value',
+        'is_secret',
+        'updated_by_user_id',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Cast is_secret ke boolean
-    protected $casts = [];
+    protected $casts = [
+        'is_secret'  => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Relasi ke User yang update
     public function updatedBy(): BelongsTo
     {
-        // TODO: return $this->belongsTo(User::class, 'updated_by_user_id');
+        return $this->belongsTo(User::class, 'updated_by_user_id');
     }
 }

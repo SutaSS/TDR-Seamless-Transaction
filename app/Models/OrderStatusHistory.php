@@ -9,18 +9,26 @@ class OrderStatusHistory extends Model
 {
     public $timestamps = false;
 
-    // TODO [PHASE 1 - Andika]: Define $fillable sesuai kolom tabel order_status_histories
-    protected $fillable = [];
+    protected $fillable = [
+        'order_id',
+        'old_status',
+        'new_status',
+        'changed_by_user_id',
+        'note',
+        'created_at',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Relasi ke Order
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
+
     public function order(): BelongsTo
     {
-        // TODO: return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class);
     }
 
-    // TODO [PHASE 1 - Andika]: Relasi ke User yang mengubah status
     public function changedBy(): BelongsTo
     {
-        // TODO: return $this->belongsTo(User::class, 'changed_by_user_id');
+        return $this->belongsTo(User::class, 'changed_by_user_id');
     }
 }

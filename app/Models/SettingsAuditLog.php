@@ -9,12 +9,20 @@ class SettingsAuditLog extends Model
 {
     public $timestamps = false;
 
-    // TODO [PHASE 1 - Andika]: Define $fillable sesuai kolom tabel settings_audit_logs
-    protected $fillable = [];
+    protected $fillable = [
+        'actor_user_id',
+        'config_key',
+        'old_value_masked',
+        'new_value_masked',
+        'created_at',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Relasi ke User pelaku
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
+
     public function actor(): BelongsTo
     {
-        // TODO: return $this->belongsTo(User::class, 'actor_user_id');
+        return $this->belongsTo(User::class, 'actor_user_id');
     }
 }

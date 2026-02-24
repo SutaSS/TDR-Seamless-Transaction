@@ -3,22 +3,34 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NotificationTemplate extends Model
 {
-    // TODO [PHASE 3 - Syahru]: Define $fillable sesuai kolom tabel notification_templates
-    protected $fillable = [];
+    protected $fillable = [
+        'template_key',
+        'channel',
+        'event_type',
+        'title',
+        'body_template',
+        'is_active',
+        'created_by_user_id',
+    ];
 
-    // TODO [PHASE 3 - Syahru]: Scope template aktif
-    public function scopeActive($query)
+    protected $casts = [
+        'is_active'  => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function scopeActive(Builder $query): Builder
     {
-        // TODO: return $query->where('is_active', true);
+        return $query->where('is_active', true);
     }
 
-    // TODO [PHASE 3 - Syahru]: Relasi ke User pembuat
     public function createdBy(): BelongsTo
     {
-        // TODO: return $this->belongsTo(User::class, 'created_by_user_id');
+        return $this->belongsTo(User::class, 'created_by_user_id');
     }
 }
