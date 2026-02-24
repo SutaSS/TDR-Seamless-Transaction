@@ -95,4 +95,44 @@ class NotificationService
             default => null,
         };
     }
+
+    /**
+     * Notify an affiliate when they earn a commission.
+     */
+    public function notifyAffiliateCommission(\App\Models\AffiliateConversion $conversion): void
+    {
+        $affiliate = $conversion->affiliate()->with('user')->first();
+        $chatId    = $affiliate?->user?->telegram_chat_id;
+
+        if (! $chatId) {
+            return;
+        }
+
+        $order      = $conversion->order;
+        $affName    = $affiliate->user->name;
+        $ordNum     = $order?->order_number ?? '—';
+        $commission = 'Rp ' . number_format((float) $conversion->commission_amount, 0, ',', '.');
+        $rate       = $conversion->commission_rate;
+        $date       = \Illuminate\Support\Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+
+        $message = "*TDR-HPZ Affiliate* 🎉\n\n"
+                 . "*{$affName}*, kamu baru saja mendapatkan komisi!\n\n"
+                 . "📦 Order: *{$ordNum}*\n"
+                 . "💰 Komisi ({$rate}%): *{$commission}*\n"
+                 . "⏰ Waktu: {$date}\n\n"
+                 . "Komisi akan masuk ke saldo setelah pesanan selesai (delivered). Keep sharing! 🚀";
+
+        // Create notification record
+        $notification = \App\Models\Notification::create([
+            'user_id'                    => $affiliate->user_id,
+            'order_id'                   => $conversion->order_id,
+            'event_type'                 => 'affiliate.commission',
+            'channel'                    => 'telegram',
+            'recipient_chat_id_snapshot' => $chatId,
+            'message_body'               => $message,
+            'status'                     => 'queued',
+        ]);
+
+        \App\Jobs\SendTelegramNotification::dispatch($notification->id);
+    }
 }

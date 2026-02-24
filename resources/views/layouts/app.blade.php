@@ -14,8 +14,12 @@
         .badge-pending   { background:#ffc107; color:#000; }
         .badge-paid      { background:#0d6efd; }
         .badge-shipped   { background:#0dcaf0; color:#000; }
-        .badge-delivered { background:#198754; }
-        .badge-failed    { background:#dc3545; }
+        .badge-pending    { background:#ffc107; color:#000; }
+        .badge-processing { background:#6f42c1; color:#fff; }
+        .badge-shipped    { background:#0dcaf0; color:#000; }
+        .badge-delivered  { background:#198754; color:#fff; }
+        .badge-cancelled  { background:#6c757d; color:#fff; }
+        .badge-failed     { background:#dc3545; color:#fff; }
     </style>
     @stack('styles')
 </head>
@@ -31,8 +35,8 @@
                 <li class="nav-item"><a class="nav-link" href="{{ route('home') }}">Beranda</a></li>
                 @auth
                     @if(auth()->user()->role !== 'admin')
-                        <li class="nav-item"><a class="nav-link" href="{{ route('checkout.form') }}">
-                            <i class="bi bi-cart3"></i> Beli Sekarang
+                        <li class="nav-item"><a class="nav-link" href="{{ route('shop') }}">
+                            <i class="bi bi-shop"></i> Beli Sekarang
                         </a></li>
                     @endif
                     @if(auth()->user()->role === 'customer')
@@ -55,15 +59,17 @@
             <ul class="navbar-nav align-items-center">
                 @auth
                     <li class="nav-item me-2">
-                        <span class="navbar-text text-light small">
+                        <a href="{{ route('profile.edit') }}" class="navbar-text text-light small text-decoration-none d-flex align-items-center gap-1">
                             <i class="bi bi-person-circle"></i>
                             {{ auth()->user()->name }}
                             @if(!auth()->user()->telegram_chat_id)
-                                <a href="{{ route('profile.edit') }}" class="badge bg-warning text-dark text-decoration-none ms-1" title="Hubungkan Telegram agar notifikasi pesanan dikirim">
-                                    <i class="bi bi-telegram"></i> Hubungkan Telegram
-                                </a>
+                                <span class="badge bg-warning text-dark ms-1" title="Hubungkan Telegram">
+                                    <i class="bi bi-telegram"></i>
+                                </span>
+                            @else
+                                <span class="badge bg-success ms-1" title="Telegram terhubung" style="font-size:.65rem">✓</span>
                             @endif
-                        </span>
+                        </a>
                     </li>
                     <li class="nav-item">
                         <form method="POST" action="{{ route('logout') }}" class="d-inline">

@@ -27,6 +27,11 @@
         <div class="card stat-card red p-3">
             <div class="text-muted small">Total Affiliate</div>
             <div class="fs-4 fw-bold">{{ $stats['total_affiliates'] }}</div>
+            @if($stats['pending_affiliates'] > 0)
+                <a href="{{ route('admin.affiliates') }}?status=pending" class="badge bg-warning text-dark text-decoration-none mt-1" style="font-size:.7rem">
+                    ⏳ {{ $stats['pending_affiliates'] }} menunggu approval
+                </a>
+            @endif
         </div>
     </div>
 </div>
@@ -49,7 +54,12 @@
                             <td><a href="{{ route('admin.orders.show', $order) }}">#{{ $order->order_number }}</a></td>
                             <td>{{ $order->customer_name ?? $order->customer?->name ?? '-' }}</td>
                             <td>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</td>
-                            <td><span class="badge badge-{{ $order->order_status }}">{{ $order->order_status }}</span></td>
+                            <td>
+                                <span class="badge badge-{{ $order->order_status }}">{{ $order->order_status }}</span>
+                                @if($order->payment_status === 'paid')
+                                    <span class="badge bg-primary ms-1" style="font-size:.65rem">paid</span>
+                                @endif
+                            </td>
                             <td class="text-muted small">{{ $order->created_at->diffForHumans() }}</td>
                         </tr>
                     @empty
@@ -82,9 +92,15 @@
         <div class="card mt-3">
             <div class="card-body">
                 <h6 class="fw-bold mb-3">Status Pesanan</h6>
-                @foreach(['pending'=>'warning','paid'=>'primary','shipped'=>'info','delivered'=>'success'] as $st => $color)
+                @foreach([
+                    'pending'    => ['warning',   'text-dark'],
+                    'processing' => ['purple',    'text-white'],
+                    'shipped'    => ['info',      'text-dark'],
+                    'delivered'  => ['success',   'text-white'],
+                    'cancelled'  => ['secondary', 'text-white'],
+                ] as $st => [$bg, $txt])
                     <div class="d-flex justify-content-between mb-1">
-                        <span class="badge bg-{{ $color }}">{{ $st }}</span>
+                        <span class="badge badge-{{ $st }}">{{ $st }}</span>
                         <span>{{ $stats[$st.'_orders'] ?? 0 }}</span>
                     </div>
                 @endforeach

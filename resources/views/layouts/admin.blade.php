@@ -17,6 +17,13 @@
         .stat-card.green  { border-color: #198754; }
         .stat-card.orange { border-color: #fd7e14; }
         .stat-card.red    { border-color: #dc3545; }
+        /* Order status badges */
+        .badge-pending    { background:#ffc107!important; color:#000!important; }
+        .badge-processing { background:#6f42c1!important; color:#fff!important; }
+        .badge-shipped    { background:#0dcaf0!important; color:#000!important; }
+        .badge-delivered  { background:#198754!important; color:#fff!important; }
+        .badge-cancelled  { background:#6c757d!important; color:#fff!important; }
+        .badge-paid       { background:#0d6efd!important; color:#fff!important; }
     </style>
     @stack('styles')
 </head>

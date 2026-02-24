@@ -19,6 +19,11 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
 })->name('home');
 
 // ---------------------------------------------------------------------------
+// Shop / Product Catalog
+// ---------------------------------------------------------------------------
+Route::get('/shop', [HomeController::class, 'shop'])->name('shop');
+
+// ---------------------------------------------------------------------------
 // Auth (Register & Login) — hanya untuk guest
 // ---------------------------------------------------------------------------
 Route::middleware('guest')->group(function () {
@@ -76,6 +81,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/orders/{order}/notify',   [AdminController::class, 'sendNotification'])->name('orders.notify');
         Route::post('/orders/{order}/simulate-payment', [AdminController::class, 'simulatePayment'])->name('orders.simulate-payment');
         Route::get('/affiliates',            [AdminController::class, 'affiliates'])->name('affiliates');
+        Route::post('/affiliates/{affiliate}/approve', [AdminController::class, 'approveAffiliate'])->name('affiliates.approve');
+        Route::post('/affiliates/{affiliate}/reject',  [AdminController::class, 'rejectAffiliate'])->name('affiliates.reject');
         Route::get('/notifications',         [AdminController::class, 'notifications'])->name('notifications');
     });
 });

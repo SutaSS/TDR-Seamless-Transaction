@@ -46,7 +46,9 @@ class AffiliateController extends Controller
         }
 
         $validated = $request->validate([
-            'payout_method' => 'nullable|in:bank,ewallet,manual',
+            'payout_method'         => 'required|in:bank_bca,bank_bri,bank_bni,bank_mandiri,ovo,gopay,dana,shopeepay,manual',
+            'payout_account_number' => 'required|string|max:100',
+            'payout_account_name'   => 'required|string|max:255',
         ]);
 
         $user = Auth::user();
@@ -61,23 +63,25 @@ class AffiliateController extends Controller
             } while (Affiliate::where('referral_code', $code)->exists());
 
             Affiliate::create([
-                'user_id'         => $user->id,
-                'referral_code'   => $code,
-                'status'          => 'approved',
-                'commission_rate' => 10.00,
-                'payout_method'   => $validated['payout_method'] ?? 'manual',
+                'user_id'               => $user->id,
+                'referral_code'         => $code,
+                'status'                => 'pending',   // Admin must approve first
+                'commission_rate'       => 10.00,
+                'payout_method'         => $validated['payout_method'],
+                'payout_account_number' => $validated['payout_account_number'],
+                'payout_account_name'   => $validated['payout_account_name'],
             ]);
 
-            $user->update(['role' => 'affiliate']);
+            // Role stays as customer until admin approves
         });
 
         return redirect()->route('affiliate.dashboard')
-            ->with('success', 'Selamat! Anda kini terdaftar sebagai affiliate.');
+            ->with('success', 'Pendaftaran affiliate berhasil! Akun Anda sedang menunggu persetujuan admin. Anda akan mendapat notifikasi via Telegram setelah diapprove.');
     }
 
     /**
      * GET /affiliate/dashboard
-     * Harus login & sudah jadi affiliate.
+     * Harus login & sudah mendaftar sebagai affiliate.
      */
     public function dashboard(): View|RedirectResponse
     {
@@ -89,7 +93,7 @@ class AffiliateController extends Controller
         $affiliate = Affiliate::where('user_id', Auth::id())->with('user')->first();
 
         if (! $affiliate) {
-            return redirect()->route('affiliate.register')
+            return redirect()->route('affiliate.register.form')
                 ->with('info', 'Daftarkan diri Anda sebagai affiliate terlebih dahulu.');
         }
 
@@ -100,7 +104,7 @@ class AffiliateController extends Controller
 
         $recentOrders = Order::with(['items'])
             ->where('affiliate_id', $affiliate->id)
-            ->whereIn('order_status', ['paid', 'shipped', 'delivered'])
+            ->whereIn('order_status', ['processing', 'shipped', 'delivered'])
             ->latest()
             ->limit(10)
             ->get();
@@ -153,6 +157,12 @@ class AffiliateController extends Controller
 
         if (! $affiliate) {
             return redirect('/');
+        }
+
+        // BLOCK SELF-REFERRAL: affiliate cannot click their own link
+        if (Auth::check() && Auth::id() === $affiliate->user_id) {
+            return redirect('/')
+                ->with('info', 'Anda tidak dapat menggunakan link referral milik sendiri.');
         }
 
         AffiliateReferralClick::create([

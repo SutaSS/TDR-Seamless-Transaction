@@ -7,18 +7,39 @@
 
 @section('content')
 <div class="container">
+
+    {{-- Pending status warning --}}
+    @if($affiliate->status === 'pending')
+    <div class="alert alert-warning border-warning d-flex align-items-start gap-3 mb-4">
+        <div style="font-size:1.8rem">⏳</div>
+        <div>
+            <div class="fw-bold">Akun Affiliate Anda Sedang Ditinjau</div>
+            <div class="small">Pendaftaran Anda telah diterima dan sedang menunggu persetujuan admin. Proses biasanya selesai dalam 1x24 jam.
+            Anda akan mendapat notifikasi via Telegram setelah diapprove.</div>
+        </div>
+    </div>
+    @elseif($affiliate->status === 'rejected')
+    <div class="alert alert-danger mb-4">
+        <strong>Akun Affiliate Ditolak</strong> — Hubungi admin untuk informasi lebih lanjut.
+    </div>
+    @endif
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="fw-bold mb-0">Dashboard Affiliate</h4>
-            <p class="text-muted mb-0">{{ $affiliate->user?->name }} · <code>{{ $affiliate->referral_code }}</code></p>
+            <p class="text-muted mb-0">{{ $affiliate->user?->name }} · <code>{{ $affiliate->referral_code }}</code>
+                <span class="badge {{ $affiliate->status === 'approved' ? 'bg-success' : ($affiliate->status === 'pending' ? 'bg-warning text-dark' : 'bg-danger') }} ms-1">{{ $affiliate->status }}</span>
+            </p>
         </div>
+        @if($affiliate->status === 'approved')
         <div class="input-group" style="max-width:350px">
             <input type="text" class="form-control form-control-sm" id="refLink" value="{{ $referralLink }}" readonly>
             <button class="btn btn-sm btn-outline-secondary"
-                onclick="navigator.clipboard.writeText(document.getElementById('refLink').value);this.textContent='✓'">
+                onclick="navigator.clipboard.writeText(document.getElementById('refLink').value);this.textContent='✓ Disalin'">
                 Salin Link
             </button>
         </div>
+        @endif
     </div>
 
     {{-- Stat cards --}}

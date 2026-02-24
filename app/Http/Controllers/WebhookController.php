@@ -90,6 +90,30 @@ class WebhookController extends Controller
                         'paid_at'             => now(),
                     ]);
 
+                    // Create affiliate commission if order came from referral
+                    if ($order->affiliate_id && ! AffiliateConversion::where('order_id', $order->id)->exists()) {
+                        $affiliate = Affiliate::find($order->affiliate_id);
+                        if ($affiliate) {
+                            $commissionRate   = $affiliate->commission_rate;
+                            $commissionAmount = round($grossAmount * ($commissionRate / 100), 2);
+
+                            $conversion = AffiliateConversion::create([
+                                'affiliate_id'      => $affiliate->id,
+                                'order_id'          => $order->id,
+                                'referral_click_id' => $order->referral_click_id ?? null,
+                                'commission_rate'   => $commissionRate,
+                                'commission_amount' => $commissionAmount,
+                                'is_self_referral'  => $affiliate->user_id === $order->customer_user_id,
+                                'status'            => 'pending',
+                            ]);
+
+                            $affiliate->increment('total_conversions');
+                            $affiliate->increment('total_commission_amount', $commissionAmount);
+                            $this->notif->notifyAffiliateCommission($conversion);
+                        }
+                    }
+
+
                 } else {
                     // ── Case B: Order does NOT exist (direct API / testing) ──
                     $customer = $this->resolveCustomer($payload);
@@ -157,7 +181,7 @@ class WebhookController extends Controller
                         $commissionRate   = $affiliate->commission_rate;
                         $commissionAmount = round($grossAmount * ($commissionRate / 100), 2);
 
-                        AffiliateConversion::create([
+                        $conversion = AffiliateConversion::create([
                             'affiliate_id'      => $affiliate->id,
                             'order_id'          => $order->id,
                             'referral_click_id' => $referralClick?->id,
@@ -169,6 +193,9 @@ class WebhookController extends Controller
 
                         $affiliate->increment('total_conversions');
                         $affiliate->increment('total_commission_amount', $commissionAmount);
+
+                        // Notify affiliate about their new commission via Telegram
+                        $this->notif->notifyAffiliateCommission($conversion);
                     }
 
                     // Trigger notification manually for case B (observer already fired for case A)

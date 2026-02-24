@@ -19,11 +19,13 @@ class Affiliate extends Model
         'total_clicks',
         'total_conversions',
         'total_commission_amount',
+        'approved_at',
     ];
 
     protected $casts = [
         'commission_rate'          => 'decimal:2',
         'total_commission_amount'  => 'decimal:2',
+        'approved_at'              => 'datetime',
     ];
 
     public function user(): BelongsTo

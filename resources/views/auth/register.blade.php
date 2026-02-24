@@ -41,6 +41,19 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label fw-semibold">Nomor Telepon <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                <input type="tel" name="phone" value="{{ old('phone') }}"
+                                       class="form-control @error('phone') is-invalid @enderror"
+                                       placeholder="08123456789" required>
+                            </div>
+                            @error('phone')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label fw-semibold">Password</label>
                             <input type="password" name="password"
                                    class="form-control @error('password') is-invalid @enderror"

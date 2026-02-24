@@ -57,13 +57,16 @@ class AdminController extends Controller
     public function dashboard(): View
     {
         $stats = [
-            'total_orders'     => Order::count(),
-            'pending_orders'   => Order::where('order_status', 'pending')->count(),
-            'paid_orders'      => Order::where('payment_status', 'paid')->count(),
-            'shipped_orders'   => Order::where('order_status', 'shipped')->count(),
-            'delivered_orders' => Order::where('order_status', 'delivered')->count(),
-            'total_affiliates' => Affiliate::count(),
-            'total_revenue'    => Order::where('payment_status', 'paid')->sum('total_amount'),
+            'total_orders'       => Order::count(),
+            'pending_orders'     => Order::where('order_status', 'pending')->count(),
+            'processing_orders'  => Order::where('order_status', 'processing')->count(),
+            'shipped_orders'     => Order::where('order_status', 'shipped')->count(),
+            'delivered_orders'   => Order::where('order_status', 'delivered')->count(),
+            'cancelled_orders'   => Order::where('order_status', 'cancelled')->count(),
+            'paid_orders'        => Order::where('payment_status', 'paid')->count(),
+            'total_affiliates'   => Affiliate::count(),
+            'pending_affiliates' => Affiliate::where('status', 'pending')->count(),
+            'total_revenue'      => Order::where('payment_status', 'paid')->sum('total_amount'),
         ];
 
         $recentOrders = Order::with(['customer', 'affiliate'])
@@ -214,15 +217,69 @@ class AdminController extends Controller
     // Affiliates
     // -------------------------------------------------------------------------
 
-    public function affiliates(): View
+    public function affiliates(Request $request): View
     {
-        $affiliates = Affiliate::with('user')
+        $query = Affiliate::with('user')
             ->withCount('referralClicks')
             ->withCount('conversions')
-            ->orderByDesc('total_commission_amount')
-            ->paginate(20);
+            ->orderByDesc('created_at');
 
-        return view('admin.affiliates', compact('affiliates'));
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $affiliates   = $query->paginate(20);
+        $pendingCount = Affiliate::where('status', 'pending')->count();
+
+        return view('admin.affiliates', compact('affiliates', 'pendingCount'));
+    }
+
+    public function approveAffiliate(Affiliate $affiliate): RedirectResponse
+    {
+        $affiliate->update([
+            'status'      => 'approved',
+            'approved_at' => now(),
+        ]);
+
+        // Promote user role to 'affiliate'
+        $affiliate->user?->update(['role' => 'affiliate']);
+
+        // Notify affiliate via Telegram if connected
+        if ($affiliate->user?->telegram_chat_id) {
+            $name = $affiliate->user->name;
+            $code = $affiliate->referral_code;
+            $msg  = "*TDR-HPZ Affiliate* 🎉\n\n"
+                  . "Selamat *{$name}*!\n\n"
+                  . "Pendaftaran affiliate Anda telah *disetujui*.\n"
+                  . "Kode referral Anda: `{$code}`\n\n"
+                  . "Mulai bagikan link Anda dan dapatkan komisi 10% dari setiap pembelian!";
+            app(\App\Services\TelegramService::class)->sendMessage($affiliate->user->telegram_chat_id, $msg);
+        }
+
+        return back()->with('success', 'Affiliate ' . ($affiliate->user?->name ?? '') . ' berhasil diapprove.');
+    }
+
+    public function rejectAffiliate(Affiliate $affiliate): RedirectResponse
+    {
+        $oldStatus = $affiliate->status;
+        $affiliate->update([
+            'status'      => 'rejected',
+            'approved_at' => null,
+        ]);
+
+        // Demote user role back to 'customer'
+        $affiliate->user?->update(['role' => 'customer']);
+
+        // Notify affiliate via Telegram if was approved (notify suspension)
+        if ($oldStatus === 'approved' && $affiliate->user?->telegram_chat_id) {
+            $name = $affiliate->user->name;
+            $msg  = "*TDR-HPZ Affiliate*\n\n"
+                  . "Halo *{$name}*, akun affiliate Anda telah *dinonaktifkan* oleh admin.\n"
+                  . "Hubungi admin untuk informasi lebih lanjut.";
+            app(\App\Services\TelegramService::class)->sendMessage($affiliate->user->telegram_chat_id, $msg);
+        }
+
+        return back()->with('success', 'Affiliate ' . ($affiliate->user?->name ?? '') . ' telah ditolak/dinonaktifkan.');
     }
 
     // -------------------------------------------------------------------------
