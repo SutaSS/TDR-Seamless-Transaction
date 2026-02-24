@@ -9,6 +9,8 @@ use Illuminate\Support\Carbon;
 
 class NotificationService
 {
+    public function __construct(private TelegramService $telegram) {}
+
     /**
      * Fire a Telegram notification for an order event.
      * Creates a Notification record then dispatches the job.
@@ -38,6 +40,42 @@ class NotificationService
         ]);
 
         SendTelegramNotification::dispatch($notification->id);
+    }
+
+    /**
+     * Fire a Telegram notification SYNCHRONOUSLY (no queue worker needed).
+     * Used by console commands / schedulers where queue worker may not be running.
+     */
+    public function notifyOrderStatusSync(Order $order, string $event): void
+    {
+        $user = $order->customer;
+
+        if (! $user || ! $user->telegram_chat_id) {
+            return;
+        }
+
+        $message = $this->buildMessage($order, $event);
+        if (! $message) {
+            return;
+        }
+
+        $notification = Notification::create([
+            'user_id'                    => $user->id,
+            'order_id'                   => $order->id,
+            'event_type'                 => $event,
+            'channel'                    => 'telegram',
+            'recipient_chat_id_snapshot' => $user->telegram_chat_id,
+            'message_body'               => $message,
+            'status'                     => 'queued',
+        ]);
+
+        $ok = $this->telegram->sendMessage($user->telegram_chat_id, $message);
+
+        $notification->update([
+            'status'    => $ok ? 'sent' : 'failed',
+            'sent_at'   => $ok ? now() : null,
+            'last_error'=> $ok ? null : 'Sync send failed',
+        ]);
     }
 
     /**

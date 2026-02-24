@@ -39,9 +39,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 // Profil — untuk user yang sudah login
 // ---------------------------------------------------------------------------
 Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {
-    Route::get('/',         [ProfileController::class, 'edit'])->name('edit');
-    Route::put('/',         [ProfileController::class, 'update'])->name('update');
-    Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password');
+    Route::get('/',           [ProfileController::class, 'edit'])->name('edit');
+    Route::put('/',           [ProfileController::class, 'update'])->name('update');
+    Route::put('/password',   [ProfileController::class, 'updatePassword'])->name('password');
+    Route::post('/telegram',  [ProfileController::class, 'saveTelegramId'])->name('telegram');
 });
 
 // ---------------------------------------------------------------------------
@@ -52,6 +53,14 @@ Route::prefix('checkout')->name('checkout.')->middleware('auth')->group(function
     Route::post('/',       [CheckoutController::class, 'process'])->name('process');
     Route::get('/success', [CheckoutController::class, 'success'])->name('success');
     Route::get('/failed',  [CheckoutController::class, 'failed'])->name('failed');
+});
+
+// ---------------------------------------------------------------------------
+// Riwayat Pesanan (Customer)
+// ---------------------------------------------------------------------------
+Route::middleware('auth')->name('orders.')->group(function () {
+    Route::get('/my-orders',        [HomeController::class, 'myOrders'])->name('index');
+    Route::get('/my-orders/{order}',[HomeController::class, 'myOrderDetail'])->name('show');
 });
 
 // ---------------------------------------------------------------------------
@@ -78,6 +87,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/orders',                [AdminController::class, 'orders'])->name('orders');
         Route::get('/orders/{order}',        [AdminController::class, 'showOrder'])->name('orders.show');
         Route::put('/orders/{order}/status',   [AdminController::class, 'updateStatus'])->name('orders.status');
+        Route::put('/orders/{order}/tracking', [AdminController::class, 'updateTracking'])->name('orders.tracking');
         Route::post('/orders/{order}/notify',   [AdminController::class, 'sendNotification'])->name('orders.notify');
         Route::post('/orders/{order}/simulate-payment', [AdminController::class, 'simulatePayment'])->name('orders.simulate-payment');
         Route::get('/affiliates',            [AdminController::class, 'affiliates'])->name('affiliates');

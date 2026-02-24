@@ -167,7 +167,28 @@ class AdminController extends Controller
     }
 
     /**
-     * POST /admin/orders/{order}/simulate-payment  [LOCAL / DEV ONLY]
+     * PUT /admin/orders/{order}/tracking — Update/add resi without changing status.
+     * Useful when admin forgot to add resi, or resi needs correction.
+     */
+    public function updateTracking(Request $request, Order $order): RedirectResponse
+    {
+        abort_unless(in_array($order->order_status, ['shipped', 'delivered']), 403, 'Resi hanya bisa diupdate pada pesanan yang sudah dikirim.');
+
+        $validated = $request->validate([
+            'tracking_number'   => 'required|string|max:100',
+            'shipping_provider' => 'nullable|string|max:100',
+        ]);
+
+        $order->update([
+            'tracking_number'   => $validated['tracking_number'],
+            'shipping_provider' => $validated['shipping_provider'] ?? $order->shipping_provider,
+        ]);
+
+        return back()->with('success', 'Nomor resi berhasil diperbarui.');
+    }
+
+    /**
+     * PUT /admin/orders/{order}/simulate-payment  [LOCAL / DEV ONLY]
      *
      * Simulasi webhook settlement dari Midtrans untuk testing di localhost.
      * Hanya aktif ketika APP_ENV=local.

@@ -32,6 +32,22 @@ class ProfileController extends Controller
         return back()->with('success', 'Profil diperbarui.');
     }
 
+    /**
+     * POST /profile/telegram  — quick-save Telegram Chat ID (from popup modal).
+     */
+    public function saveTelegramId(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'telegram_chat_id' => 'required|string|regex:/^-?[0-9]+$/|max:20',
+        ], [
+            'telegram_chat_id.regex' => 'Chat ID hanya berisi angka.',
+        ]);
+
+        Auth::user()->update(['telegram_chat_id' => $request->telegram_chat_id]);
+
+        return back()->with('success', 'Telegram berhasil dihubungkan! ✅ Kamu akan menerima notifikasi pesanan.');
+    }
+
     public function updatePassword(Request $request): RedirectResponse
     {
         $request->validate([

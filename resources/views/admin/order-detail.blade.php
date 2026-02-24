@@ -5,9 +5,7 @@
 <div class="d-flex align-items-center mb-4 gap-3">
     <a href="{{ route('admin.orders') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
     <h4 class="fw-bold mb-0">Pesanan #{{ $order->order_number }}</h4>
-    <span class="badge fs-6 bg-{{ match($order->order_status) {
-        'pending'=>'warning text-dark','paid'=>'primary','shipped'=>'info text-dark','delivered'=>'success',default=>'secondary'
-    } }}">{{ $order->order_status }}</span>
+    <span class="badge fs-6 badge-{{ $order->order_status }}">{{ $order->order_status }}</span>
 </div>
 
 <div class="row g-4">
@@ -193,7 +191,71 @@
         </div>
         @endif
 
-        @if($order->tracking_number)
+        {{-- Resi / Pengiriman card (shown when shipped or delivered) --}}
+        @if(in_array($order->order_status, ['shipped', 'delivered']))
+        <div class="card border-{{ $order->tracking_number ? 'success' : 'warning' }}">
+            <div class="card-header d-flex justify-content-between align-items-center
+                        bg-{{ $order->tracking_number ? 'success' : 'warning' }}
+                        {{ $order->tracking_number ? 'text-white' : 'text-dark' }}">
+                <strong><i class="bi bi-truck me-1"></i>Resi Pengiriman</strong>
+                @if($order->tracking_number)
+                    <span class="badge bg-light text-dark">{{ $order->shipping_provider ?? 'Ekspedisi' }}</span>
+                @else
+                    <span class="badge bg-danger">Belum diisi</span>
+                @endif
+            </div>
+            <div class="card-body small">
+                @if($order->tracking_number)
+                    <div class="mb-2">
+                        <div class="text-muted">Nomor Resi</div>
+                        <div class="fw-bold font-monospace fs-6">{{ $order->tracking_number }}</div>
+                    </div>
+                    @php
+                        $provider = strtolower($order->shipping_provider ?? '');
+                        $trackUrl = null;
+                        if (str_contains($provider, 'jne'))            $trackUrl = "https://www.jne.co.id/id/tracking/trace?awbNumber={$order->tracking_number}";
+                        elseif (str_contains($provider,'j&t')||str_contains($provider,'jnt')) $trackUrl = "https://jet.co.id/track/{$order->tracking_number}";
+                        elseif (str_contains($provider, 'sicepat'))    $trackUrl = "https://www.sicepat.com/checkAwb?awb={$order->tracking_number}";
+                        elseif (str_contains($provider, 'anteraja'))   $trackUrl = "https://anteraja.id/tracking/{$order->tracking_number}";
+                        elseif (str_contains($provider, 'pos'))        $trackUrl = "https://www.posindonesia.co.id/id/tracking?awb={$order->tracking_number}";
+                    @endphp
+                    @if($trackUrl)
+                        <a href="{{ $trackUrl }}" target="_blank" class="btn btn-success btn-sm w-100 mb-3">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Lacak Paket
+                        </a>
+                    @else
+                        <a href="https://cekresi.com/?noresi={{ $order->tracking_number }}" target="_blank"
+                           class="btn btn-outline-success btn-sm w-100 mb-3">
+                            <i class="bi bi-search me-1"></i>Cek Resi Online
+                        </a>
+                    @endif
+                @else
+                    <p class="text-warning fw-semibold mb-2">⚠️ Nomor resi belum diisi!</p>
+                @endif
+
+                {{-- Update / Edit resi form --}}
+                <form method="POST" action="{{ route('admin.orders.tracking', $order) }}">
+                    @csrf @method('PUT')
+                    <div class="mb-2">
+                        <label class="form-label mb-1 small fw-semibold">
+                            {{ $order->tracking_number ? 'Koreksi Resi' : 'Tambah Resi' }}
+                        </label>
+                        <input type="text" name="tracking_number" class="form-control form-control-sm"
+                               value="{{ old('tracking_number', $order->tracking_number) }}"
+                               placeholder="JNE123456789" required>
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" name="shipping_provider" class="form-control form-control-sm"
+                               value="{{ old('shipping_provider', $order->shipping_provider) }}"
+                               placeholder="JNE / J&T / SiCepat / ...">
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary w-100">
+                        <i class="bi bi-save me-1"></i>Simpan Resi
+                    </button>
+                </form>
+            </div>
+        </div>
+        @elseif($order->tracking_number)
         <div class="card">
             <div class="card-header"><strong>Pengiriman</strong></div>
             <div class="card-body small">

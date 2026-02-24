@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Order;
+use App\Services\NotificationService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -14,12 +15,18 @@ use Illuminate\Support\Carbon;
  *   processing  →  shipped    : 5 min  after status_changed_at
  *   shipped     →  delivered  : 15 min after status_changed_at
  *
+ * Notifications are sent SYNCHRONOUSLY so no queue worker is needed.
  * Run via scheduler every minute: Schedule::command('orders:advance-status')->everyMinute();
  */
 class AdvanceOrderStatus extends Command
 {
     protected $signature   = 'orders:advance-status';
     protected $description = 'Auto-advance order statuses based on elapsed time after payment';
+
+    public function __construct(private NotificationService $notif)
+    {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -31,7 +38,12 @@ class AdvanceOrderStatus extends Command
             ->where('order_status', 'pending')
             ->where('paid_at', '<=', $now->copy()->subMinute())
             ->each(function (Order $order) use (&$advanced) {
-                $order->update(['order_status' => 'processing']);
+                // Use updateQuietly to bypass observer (we send notification directly below)
+                $order->timestamps = false;
+                $order->updateQuietly(['order_status' => 'processing', 'status_changed_at' => now()]);
+                $order->timestamps = true;
+                $order->refresh();
+                $this->notif->notifyOrderStatusSync($order, 'order.processing');
                 $advanced++;
                 $this->line("  ✅ #{$order->order_number}: pending → processing");
             });
@@ -47,7 +59,11 @@ class AdvanceOrderStatus extends Command
                   });
             })
             ->each(function (Order $order) use (&$advanced) {
-                $order->update(['order_status' => 'shipped']);
+                $order->timestamps = false;
+                $order->updateQuietly(['order_status' => 'shipped', 'status_changed_at' => now()]);
+                $order->timestamps = true;
+                $order->refresh();
+                $this->notif->notifyOrderStatusSync($order, 'order.shipped');
                 $advanced++;
                 $this->line("  🚚 #{$order->order_number}: processing → shipped");
             });
@@ -62,10 +78,11 @@ class AdvanceOrderStatus extends Command
                   });
             })
             ->each(function (Order $order) use (&$advanced) {
-                $order->update([
-                    'order_status' => 'delivered',
-                    'delivered_at' => now(),
-                ]);
+                $order->timestamps = false;
+                $order->updateQuietly(['order_status' => 'delivered', 'delivered_at' => now(), 'status_changed_at' => now()]);
+                $order->timestamps = true;
+                $order->refresh();
+                $this->notif->notifyOrderStatusSync($order, 'order.delivered');
                 $advanced++;
                 $this->line("  🎉 #{$order->order_number}: shipped → delivered");
             });
