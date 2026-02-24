@@ -18,44 +18,74 @@ use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
+    // Daftar kurir + ongkos kirim tetap (bisa diganti dengan API RajaOngkir kelak)
+    public const COURIERS = [
+        'jne_reg'      => ['label' => 'JNE REG (2-3 hari)',     'cost' => 15000],
+        'jne_yes'      => ['label' => 'JNE YES (1-2 hari)',     'cost' => 25000],
+        'sicepat_reg'  => ['label' => 'SiCepat REG (2-3 hari)', 'cost' => 12000],
+        'sicepat_halu' => ['label' => 'SiCepat HALU (1-2 hari)','cost' => 18000],
+        'tiki_reg'     => ['label' => 'TIKI REG (3-5 hari)',    'cost' => 14000],
+        'pickup'       => ['label' => 'Ambil Sendiri',           'cost' => 0],
+    ];
+
     public function __construct(protected MidtransService $midtrans) {}
 
     /**
-     * GET /checkout
-     * Tampilkan form checkout dengan daftar produk aktif.
+     * GET /checkout?product_id=X&qty=1
+     * Tampilkan halaman checkout bergaya Shopee.
      */
-    public function showForm(Request $request): View
+    public function showForm(Request $request): View|RedirectResponse
     {
-        $products = Product::active()->get();
+        $productId = $request->query('product_id');
+        $qty       = max(1, (int) $request->query('qty', 1));
 
-        // Affiliate dari cookie
+        if (! $productId) {
+            return redirect()->route('home')
+                ->with('info', 'Pilih produk terlebih dahulu.');
+        }
+
+        $product = Product::active()->findOrFail($productId);
+
         $affiliateCode = $request->cookie('affiliate_ref');
         $affiliate     = $affiliateCode
             ? Affiliate::where('referral_code', $affiliateCode)->first()
             : null;
 
-        $user = Auth::user();
-        return view('checkout.index', compact('products', 'affiliate', 'user'));
+        $user    = Auth::user();
+        $couriers = self::COURIERS;
+
+        return view('checkout.index', compact('product', 'qty', 'affiliate', 'user', 'couriers'));
     }
 
     /**
      * POST /checkout
-     * Buat pending order lalu redirect ke Midtrans Snap.
      */
     public function process(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'customer_name'  => 'required|string|max:255',
-            'customer_email' => 'required|email|max:255',
-            'customer_phone' => 'nullable|string|max:30',
-            'items'          => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.qty'        => 'required|integer|min:1',
+            'product_id'        => 'required|exists:products,id',
+            'qty'               => 'required|integer|min:1|max:100',
+            'customer_name'     => 'required|string|max:255',
+            'customer_email'    => 'required|email|max:255',
+            'customer_phone'    => 'required|string|max:30',
+            'shipping_address'  => 'required|string|max:500',
+            'shipping_city'     => 'required|string|max:100',
+            'shipping_province' => 'required|string|max:100',
+            'shipping_postal_code' => 'required|string|max:10',
+            'shipping_courier'  => 'required|in:' . implode(',', array_keys(self::COURIERS)),
+            'note'              => 'nullable|string|max:500',
         ]);
 
         try {
             $redirectUrl = DB::transaction(function () use ($validated, $request) {
-                // Resolve affiliate dari cookie
+                $product      = Product::findOrFail($validated['product_id']);
+                $qty          = (int) $validated['qty'];
+                $unitPrice    = (int) round((float) $product->price);
+                $subtotal     = $unitPrice * $qty;
+                $courierData  = self::COURIERS[$validated['shipping_courier']];
+                $shippingCost = (int) $courierData['cost'];
+                $total        = $subtotal + $shippingCost;
+
                 $affiliateCode = $request->cookie('affiliate_ref');
                 $affiliate     = $affiliateCode
                     ? Affiliate::where('referral_code', $affiliateCode)->first()
@@ -69,83 +99,92 @@ class CheckoutController extends Controller
                         ->first();
                 }
 
-                // Hitung total
-                $orderItems = [];
-                $subtotal   = 0;
-
-                foreach ($validated['items'] as $item) {
-                    $product  = Product::findOrFail($item['product_id']);
-                    $qty      = (int) $item['qty'];
-                    $price    = (float) $product->price;
-                    $lineTotal = $price * $qty;
-                    $subtotal += $lineTotal;
-
-                    $orderItems[] = [
-                        'product'   => $product,
-                        'qty'       => $qty,
-                        'price'     => $price,
-                        'lineTotal' => $lineTotal,
-                    ];
-                }
-
                 $orderNumber = 'ORD-' . strtoupper(Str::random(10)) . '-' . time();
 
-                // Buat order (pending, akan di-update webhook ke paid)
                 $order = Order::create([
-                    'order_number'     => $orderNumber,
-                    'customer_user_id' => Auth::id(),
-                    'affiliate_id'     => $affiliate?->id,
-                    'referral_click_id'=> $referralClick?->id,
-                    'subtotal_amount'  => $subtotal,
-                    'discount_amount'  => 0,
-                    'total_amount'     => $subtotal,
-                    'currency'         => 'IDR',
-                    'order_status'     => 'pending',
-                    'payment_status'   => 'unpaid',
-                    'customer_name'    => $validated['customer_name'],
-                    'customer_phone'   => $validated['customer_phone'] ?? null,
+                    'order_number'        => $orderNumber,
+                    'customer_user_id'    => Auth::id(),
+                    'affiliate_id'        => $affiliate?->id,
+                    'referral_click_id'   => $referralClick?->id,
+                    'subtotal_amount'     => $subtotal,
+                    'discount_amount'     => 0,
+                    'total_amount'        => $total,
+                    'currency'            => 'IDR',
+                    'order_status'        => 'pending',
+                    'payment_status'      => 'unpaid',
+                    'customer_name'       => $validated['customer_name'],
+                    'customer_phone'      => $validated['customer_phone'],
+                    'shipping_address'    => $validated['shipping_address'],
+                    'shipping_city'       => $validated['shipping_city'],
+                    'shipping_province'   => $validated['shipping_province'],
+                    'shipping_postal_code'=> $validated['shipping_postal_code'],
+                    'shipping_courier'    => $validated['shipping_courier'],
+                    'shipping_cost'       => $shippingCost,
+                    'shipping_provider'   => $courierData['label'],
+                    'note'                => $validated['note'] ?? null,
                 ]);
 
-                // Simpan order items
-                foreach ($orderItems as $oi) {
-                    OrderItem::create([
-                        'order_id'              => $order->id,
-                        'product_id'            => $oi['product']->id,
-                        'product_name_snapshot' => $oi['product']->name,
-                        'qty'                   => $oi['qty'],
-                        'unit_price'            => $oi['price'],
-                        'line_total'            => $oi['lineTotal'],
-                    ]);
-                }
+                OrderItem::create([
+                    'order_id'              => $order->id,
+                    'product_id'            => $product->id,
+                    'product_name_snapshot' => $product->name,
+                    'qty'                   => $qty,
+                    'unit_price'            => $unitPrice,
+                    'line_total'            => $subtotal,
+                ]);
 
-                // Buat Midtrans Snap token
-                $midtransItems = array_map(fn ($oi) => [
-                    'id'       => (string) $oi['product']->id,
-                    'price'    => (int) $oi['price'],
-                    'quantity' => $oi['qty'],
-                    'name'     => $oi['product']->name,
-                ], $orderItems);
+                // Midtrans: nama produk max 50 karakter, semua amount harus int bulat
+                $itemDetails = [
+                    [
+                        'id'       => (string) $product->id,
+                        'price'    => $unitPrice,
+                        'quantity' => $qty,
+                        'name'     => substr($product->name, 0, 50),
+                    ],
+                ];
+
+                if ($shippingCost > 0) {
+                    $itemDetails[] = [
+                        'id'       => 'SHIPPING',
+                        'price'    => $shippingCost,
+                        'quantity' => 1,
+                        'name'     => 'Ongkos Kirim',
+                    ];
+                }
 
                 $params = [
                     'transaction_details' => [
                         'order_id'     => $orderNumber,
-                        'gross_amount' => (int) $subtotal,
+                        'gross_amount' => $total,
                     ],
                     'customer_details' => [
-                        'first_name' => $validated['customer_name'],
+                        'first_name' => substr($validated['customer_name'], 0, 255),
                         'email'      => $validated['customer_email'],
-                        'phone'      => $validated['customer_phone'] ?? '',
+                        'phone'      => $validated['customer_phone'],
+                        'billing_address' => [
+                            'address'   => $validated['shipping_address'],
+                            'city'      => $validated['shipping_city'],
+                            'postal_code' => $validated['shipping_postal_code'],
+                            'country_code' => 'IDN',
+                        ],
+                        'shipping_address' => [
+                            'address'   => $validated['shipping_address'],
+                            'city'      => $validated['shipping_city'],
+                            'postal_code' => $validated['shipping_postal_code'],
+                            'country_code' => 'IDN',
+                        ],
                     ],
-                    'item_details' => $midtransItems,
+                    'item_details' => $itemDetails,
                 ];
 
                 return $this->midtrans->createSnapToken($params);
             });
 
             return redirect($redirectUrl);
+
         } catch (\Throwable $e) {
             Log::error('[CheckoutController] Failed to create order', ['error' => $e->getMessage()]);
-            return back()->withErrors(['general' => 'Gagal membuat pesanan: ' . $e->getMessage()]);
+            return back()->withErrors(['general' => 'Gagal membuat pesanan: ' . $e->getMessage()])->withInput();
         }
     }
 

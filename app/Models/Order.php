@@ -14,6 +14,8 @@ class Order extends Model
         'subtotal_amount', 'discount_amount', 'total_amount', 'currency',
         'order_status', 'payment_status', 'tracking_number', 'shipping_provider',
         'customer_name', 'customer_phone', 'note', 'paid_at', 'delivered_at',
+        'shipping_address', 'shipping_city', 'shipping_province',
+        'shipping_postal_code', 'shipping_courier', 'shipping_cost',
     ];
 
     protected $casts = [
