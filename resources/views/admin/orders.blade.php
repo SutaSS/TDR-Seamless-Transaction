@@ -7,7 +7,7 @@
     <form class="d-flex gap-2" method="GET">
         <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">Semua Status</option>
-            @foreach(['pending','paid','shipped','delivered'] as $st)
+            @foreach(['pending','processing','shipped','delivered','cancelled'] as $st)
                 <option value="{{ $st }}" @selected(request('status') === $st)>{{ ucfirst($st) }}</option>
             @endforeach
         </select>

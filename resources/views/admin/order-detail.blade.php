@@ -59,11 +59,40 @@
 
         {{-- Update Status Form --}}
         @php
-            $transitions = ['pending'=>'paid','paid'=>'shipped','shipped'=>'delivered'];
-            $nextStatus  = $transitions[$order->order_status] ?? null;
+            // Admin hanya bisa: processing→shipped, shipped→delivered
+            // paid (payment) dikerjakan oleh Midtrans webhook otomatis
+            $nextStatus = match($order->order_status) {
+                'processing' => 'shipped',
+                'shipped'    => 'delivered',
+                default      => null,
+            };
         @endphp
+
+        {{-- Menunggu Pembayaran (unpaid) --}}
+        @if($order->payment_status === 'unpaid')
+        <div class="card border-warning mt-3">
+            <div class="card-header bg-warning text-dark"><strong>⏳ Menunggu Pembayaran</strong></div>
+            <div class="card-body small">
+                <p class="mb-2">Pembayaran akan dikonfirmasi otomatis oleh <strong>Midtrans webhook</strong> setelah pelanggan selesai bayar.</p>
+                <p class="mb-0 text-muted">Alur: Snap payment → webhook <code>settlement</code> → status otomatis <em>paid</em> → notifikasi Telegram terkirim.</p>
+                @if(app()->isLocal())
+                <hr>
+                <p class="text-danger fw-semibold mb-2">🧪 Mode Local — Simulasi Pembayaran</p>
+                <form method="POST" action="{{ route('admin.orders.simulate-payment', $order) }}">
+                    @csrf
+                    <button type="submit" class="btn btn-warning btn-sm"
+                        onclick="return confirm('Simulasi pembayaran selesai untuk order ini?')">
+                        ⚡ Simulasi Webhook Settlement
+                    </button>
+                </form>
+                @endif
+            </div>
+        </div>
+        @endif
+
+        {{-- Update Status: processing→shipped atau shipped→delivered --}}
         @if($nextStatus)
-        <div class="card">
+        <div class="card mt-3">
             <div class="card-header"><strong>Update Status → {{ ucfirst($nextStatus) }}</strong></div>
             <div class="card-body">
                 <form method="POST" action="{{ route('admin.orders.status', $order) }}">
@@ -90,6 +119,37 @@
                     </button>
                 </form>
             </div>
+        </div>
+        @endif
+
+        {{-- Manual Kirim Notifikasi --}}
+        @if($order->customer?->telegram_chat_id)
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Kirim Notifikasi Telegram</strong>
+                <span class="badge bg-success">Chat ID: {{ $order->customer->telegram_chat_id }}</span>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('admin.orders.notify', $order) }}">
+                    @csrf
+                    <div class="mb-3">
+                        <label class="form-label">Pilih Event</label>
+                        <select name="event" class="form-select">
+                            <option value="payment.confirmed">✅ Pembayaran Dikonfirmasi</option>
+                            <option value="order.processing">🔧 Sedang Diproses</option>
+                            <option value="order.shipped">🚚 Pesanan Dikirim</option>
+                            <option value="order.delivered">📦 Pesanan Diterima</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm">
+                        📤 Kirim Sekarang
+                    </button>
+                </form>
+            </div>
+        </div>
+        @else
+        <div class="alert alert-warning mt-3 small">
+            ⚠️ Pelanggan belum mengisi <strong>Telegram Chat ID</strong> di profil. Notifikasi tidak bisa dikirim.
         </div>
         @endif
     </div>

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\SendTelegramNotification;
 use App\Models\Affiliate;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,11 +59,11 @@ class AdminController extends Controller
         $stats = [
             'total_orders'     => Order::count(),
             'pending_orders'   => Order::where('order_status', 'pending')->count(),
-            'paid_orders'      => Order::where('order_status', 'paid')->count(),
+            'paid_orders'      => Order::where('payment_status', 'paid')->count(),
             'shipped_orders'   => Order::where('order_status', 'shipped')->count(),
             'delivered_orders' => Order::where('order_status', 'delivered')->count(),
             'total_affiliates' => Affiliate::count(),
-            'total_revenue'    => Order::whereIn('order_status', ['paid', 'shipped', 'delivered'])->sum('total_amount'),
+            'total_revenue'    => Order::where('payment_status', 'paid')->sum('total_amount'),
         ];
 
         $recentOrders = Order::with(['customer', 'affiliate'])
@@ -106,35 +106,35 @@ class AdminController extends Controller
     /**
      * PUT /admin/orders/{order}/status
      *
-     * Rules:
-     * - pending → paid (via webhook, but fallback allowed)
-     * - paid → shipped (tracking_number REQUIRED)
-     * - shipped → delivered
+     * Admin hanya bisa mengubah order_status:
+     *   processing → shipped  (butuh tracking_number)
+     *   shipped    → delivered
+     *
+     * Pembayaran (unpaid → paid) bukan tugas admin — dikerjakan oleh
+     * Midtrans webhook (POST /api/webhook/payment) yang akan meng-update
+     * payment_status dan memicu notifikasi via OrderObserver.
      */
     public function updateStatus(Request $request, Order $order): RedirectResponse
     {
-        $rules = ['status' => 'required|in:paid,shipped,delivered'];
+        $rules = ['status' => 'required|in:shipped,delivered'];
 
         if ($request->status === 'shipped') {
-            $rules['tracking_number']  = 'required|string|max:100';
+            $rules['tracking_number']   = 'required|string|max:100';
             $rules['shipping_provider'] = 'nullable|string|max:100';
         }
 
         $validated = $request->validate($rules);
 
-        $oldStatus = $order->order_status;
         $newStatus = $validated['status'];
+        $oldStatus = $order->order_status;
 
-        // Validate transition
         $allowed = [
-            'pending'  => ['paid'],
-            'paid'     => ['shipped'],
-            'shipped'  => ['delivered'],
-            'delivered'=> [],
+            'processing' => ['shipped'],
+            'shipped'    => ['delivered'],
         ];
 
         if (! in_array($newStatus, $allowed[$oldStatus] ?? [])) {
-            return back()->withErrors(['status' => "Status tidak bisa diubah dari {$oldStatus} ke {$newStatus}"]);
+            return back()->withErrors(['status' => "Status tidak bisa diubah dari {$oldStatus} ke {$newStatus}."]);
         }
 
         $updateData = ['order_status' => $newStatus];
@@ -148,47 +148,66 @@ class AdminController extends Controller
             $updateData['delivered_at'] = now();
         }
 
+        // Update triggers OrderObserver → NotificationService → kirim Telegram
         $order->update($updateData);
 
-        // Log status history
         OrderStatusHistory::create([
-            'order_id'        => $order->id,
-            'from_status'     => $oldStatus,
-            'to_status'       => $newStatus,
+            'order_id'           => $order->id,
+            'from_status'        => $oldStatus,
+            'to_status'          => $newStatus,
             'changed_by_user_id' => Auth::id(),
-            'note'            => $request->input('note'),
-            'changed_at'      => now(),
+            'note'               => $request->input('note'),
+            'changed_at'         => now(),
         ]);
-
-        // Insert notification & dispatch job
-        $eventType = match ($newStatus) {
-            'shipped'   => 'order.shipped',
-            'delivered' => 'order.delivered',
-            default     => 'order.status_updated',
-        };
-
-        $msgMap = [
-            'shipped'   => "*Pesanan Dikirim!*\nNomor: #{$order->order_number}\nNoResi: " . ($validated['tracking_number'] ?? '-'),
-            'delivered' => "*Pesanan Tiba!*\nNomor: #{$order->order_number}\nTerima kasih sudah berbelanja di TDR HPZ.",
-            'default'     => "*Update Pesanan*\nNomor: #{$order->order_number}\nStatus: {$newStatus}",
-        ];
-
-        $recipientId = $order->affiliate?->user_id ?? $order->customer_user_id;
-        $chatId      = $order->affiliate?->user?->telegram_chat_id ?? $order->customer?->telegram_chat_id;
-
-        $notif = Notification::create([
-            'user_id'                    => $recipientId,
-            'order_id'                   => $order->id,
-            'event_type'                 => $eventType,
-            'channel'                    => 'telegram',
-            'recipient_chat_id_snapshot' => $chatId,
-            'message_body'               => $msgMap[$newStatus] ?? $msgMap['default'],
-            'status'                     => 'queued',
-        ]);
-
-        SendTelegramNotification::dispatch($notif->id);
 
         return back()->with('success', "Status pesanan berhasil diubah ke {$newStatus}.");
+    }
+
+    /**
+     * POST /admin/orders/{order}/simulate-payment  [LOCAL / DEV ONLY]
+     *
+     * Simulasi webhook settlement dari Midtrans untuk testing di localhost.
+     * Hanya aktif ketika APP_ENV=local.
+     */
+    public function simulatePayment(Order $order, NotificationService $notif): RedirectResponse
+    {
+        abort_unless(app()->isLocal(), 403, 'Hanya tersedia di environment local.');
+
+        if ($order->payment_status === 'paid') {
+            return back()->withErrors(['simulate' => 'Pembayaran sudah berstatus paid.']);
+        }
+
+        // Simulasi persis seperti yang dilakukan WebhookController saat terima settlement
+        $order->update([
+            'payment_status' => 'paid',
+            'paid_at'        => now(),
+        ]);
+
+        // Observer akan otomatis kirim notif payment.confirmed
+        // AdvanceOrderStatus command akan ubah pending→processing dalam 1 menit
+
+        return back()->with('success', '✅ Simulasi pembayaran berhasil! Observer akan mengirim notifikasi Telegram. Order akan otomatis jadi "processing" dalam ~1 menit (jalankan php artisan orders:advance-status).');
+    }
+
+    // -------------------------------------------------------------------------
+    // Manual Telegram notification
+    // -------------------------------------------------------------------------
+
+    public function sendNotification(Request $request, Order $order, NotificationService $notif): RedirectResponse
+    {
+        $validated = $request->validate([
+            'event' => 'required|in:payment.confirmed,order.processing,order.shipped,order.delivered,order.cancelled',
+        ]);
+
+        $chatId = $order->customer?->telegram_chat_id;
+
+        if (! $chatId) {
+            return back()->withErrors(['notify' => 'Pelanggan belum mengisi Telegram Chat ID.']);
+        }
+
+        $notif->notifyOrderStatus($order, $validated['event']);
+
+        return back()->with('success', 'Notifikasi Telegram berhasil dikirim ke ' . $chatId);
     }
 
     // -------------------------------------------------------------------------

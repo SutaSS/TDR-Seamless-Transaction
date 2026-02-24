@@ -72,7 +72,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard',             [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/orders',                [AdminController::class, 'orders'])->name('orders');
         Route::get('/orders/{order}',        [AdminController::class, 'showOrder'])->name('orders.show');
-        Route::put('/orders/{order}/status', [AdminController::class, 'updateStatus'])->name('orders.status');
+        Route::put('/orders/{order}/status',   [AdminController::class, 'updateStatus'])->name('orders.status');
+        Route::post('/orders/{order}/notify',   [AdminController::class, 'sendNotification'])->name('orders.notify');
+        Route::post('/orders/{order}/simulate-payment', [AdminController::class, 'simulatePayment'])->name('orders.simulate-payment');
         Route::get('/affiliates',            [AdminController::class, 'affiliates'])->name('affiliates');
         Route::get('/notifications',         [AdminController::class, 'notifications'])->name('notifications');
     });
