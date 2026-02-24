@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AffiliateController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 // ---------------------------------------------------------------------------
@@ -13,13 +15,33 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
     if ($request->has('ref')) {
         return app(AffiliateController::class)->captureReferral($request);
     }
-    return app(HomeController::class)->index();
+    return app(HomeController::class)->index($request);
 })->name('home');
 
 // ---------------------------------------------------------------------------
-// Checkout
+// Auth (Register & Login) — hanya untuk guest
 // ---------------------------------------------------------------------------
-Route::prefix('checkout')->name('checkout.')->group(function () {
+Route::middleware('guest')->group(function () {
+    Route::get('/register',  [AuthController::class, 'showRegisterForm'])->name('register');
+    Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+    Route::get('/login',     [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login',    [AuthController::class, 'login'])->name('login.post');
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// ---------------------------------------------------------------------------
+// Profil — untuk user yang sudah login
+// ---------------------------------------------------------------------------
+Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {
+    Route::get('/',  [ProfileController::class, 'edit'])->name('edit');
+    Route::put('/',  [ProfileController::class, 'update'])->name('update');
+});
+
+// ---------------------------------------------------------------------------
+// Checkout — harus login sebagai customer/affiliate
+// ---------------------------------------------------------------------------
+Route::prefix('checkout')->name('checkout.')->middleware('auth')->group(function () {
     Route::get('/',        [CheckoutController::class, 'showForm'])->name('form');
     Route::post('/',       [CheckoutController::class, 'process'])->name('process');
     Route::get('/success', [CheckoutController::class, 'success'])->name('success');
@@ -42,7 +64,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login',  [AdminController::class, 'showLogin'])->name('login');
     Route::post('/login', [AdminController::class, 'login'])->name('login.post');
 
-    // Protected admin routes
     Route::middleware('auth')->group(function () {
         Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 
@@ -54,3 +75,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/notifications',         [AdminController::class, 'notifications'])->name('notifications');
     });
 });
+
+// ---------------------------------------------------------------------------
+// Webhook — lihat routes/api.php (POST /api/webhook/payment)
+// ---------------------------------------------------------------------------
+
