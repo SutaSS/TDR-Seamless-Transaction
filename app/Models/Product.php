@@ -7,15 +7,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
-    // TODO [PHASE 1 - Andika]: Define $fillable sesuai kolom tabel products
-    protected $fillable = [];
+    protected $fillable = [
+        'sku', 'name', 'description', 'price',
+        'commission_rate', 'stock', 'is_active',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Cast kolom decimal & boolean
-    protected $casts = [];
+    protected $casts = [
+        'price'           => 'decimal:2',
+        'commission_rate' => 'decimal:2',
+        'is_active'       => 'boolean',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Scope hanya produk aktif
     public function scopeActive($query)
     {
-        // TODO: return $query->where('is_active', true);
+        return $query->where('is_active', true);
     }
 }

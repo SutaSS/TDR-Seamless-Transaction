@@ -7,27 +7,32 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AffiliateConversion extends Model
 {
-    // TODO [PHASE 2 - Ghufron]: Define $fillable sesuai kolom tabel affiliate_conversions
-    protected $fillable = [];
+    protected $fillable = [
+        'affiliate_id', 'order_id', 'referral_click_id',
+        'commission_rate', 'commission_amount',
+        'is_self_referral', 'status', 'approved_at', 'paid_at',
+    ];
 
-    // TODO [PHASE 2 - Ghufron]: Cast kolom decimal & enum
-    protected $casts = [];
+    protected $casts = [
+        'commission_rate'   => 'decimal:2',
+        'commission_amount' => 'decimal:2',
+        'is_self_referral'  => 'boolean',
+        'approved_at'       => 'datetime',
+        'paid_at'           => 'datetime',
+    ];
 
-    // TODO [PHASE 2 - Ghufron]: Relasi ke Affiliate
     public function affiliate(): BelongsTo
     {
-        // TODO: return $this->belongsTo(Affiliate::class);
+        return $this->belongsTo(Affiliate::class);
     }
 
-    // TODO [PHASE 2 - Ghufron]: Relasi ke Order
     public function order(): BelongsTo
     {
-        // TODO: return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class);
     }
 
-    // TODO [PHASE 2 - Ghufron]: Relasi ke ReferralClick
     public function referralClick(): BelongsTo
     {
-        // TODO: return $this->belongsTo(AffiliateReferralClick::class);
+        return $this->belongsTo(AffiliateReferralClick::class);
     }
 }

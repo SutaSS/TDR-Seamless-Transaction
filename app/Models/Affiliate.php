@@ -8,30 +8,41 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Affiliate extends Model
 {
-    // TODO [PHASE 1 - Andika]: Define $fillable sesuai kolom tabel affiliates
-    protected $fillable = [];
+    protected $fillable = [
+        'user_id',
+        'referral_code',
+        'status',
+        'commission_rate',
+        'payout_method',
+        'payout_account_name',
+        'payout_account_number',
+        'total_clicks',
+        'total_conversions',
+        'total_commission_amount',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Relasi ke User
+    protected $casts = [
+        'commission_rate'          => 'decimal:2',
+        'total_commission_amount'  => 'decimal:2',
+    ];
+
     public function user(): BelongsTo
     {
-        // TODO: return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class);
     }
 
-    // TODO [PHASE 2 - Ghufron]: Relasi ke referral clicks
     public function referralClicks(): HasMany
     {
-        // TODO: return $this->hasMany(AffiliateReferralClick::class);
+        return $this->hasMany(AffiliateReferralClick::class);
     }
 
-    // TODO [PHASE 2 - Ghufron]: Relasi ke conversions
     public function conversions(): HasMany
     {
-        // TODO: return $this->hasMany(AffiliateConversion::class);
+        return $this->hasMany(AffiliateConversion::class);
     }
 
-    // TODO [PHASE 2 - Ghufron]: Relasi ke orders
     public function orders(): HasMany
     {
-        // TODO: return $this->hasMany(Order::class);
+        return $this->hasMany(Order::class);
     }
 }

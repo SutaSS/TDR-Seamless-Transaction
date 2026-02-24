@@ -7,33 +7,35 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
-    // TODO [PHASE 3 - Syahru]: Define $fillable sesuai kolom tabel notifications
-    protected $fillable = [];
+    protected $fillable = [
+        'user_id', 'order_id', 'conversion_id', 'event_type',
+        'channel', 'recipient_chat_id_snapshot', 'template_key',
+        'message_body', 'provider_message_id', 'status',
+        'retry_count', 'last_error', 'sent_at',
+    ];
 
-    // TODO [PHASE 3 - Syahru]: Cast kolom enum & integer
-    protected $casts = [];
+    protected $casts = [
+        'retry_count' => 'integer',
+        'sent_at'     => 'datetime',
+    ];
 
-    // TODO [PHASE 3 - Syahru]: Scope status pending (belum terkirim)
     public function scopePending($query)
     {
-        // TODO: return $query->where('status', 'queued');
+        return $query->where('status', 'queued');
     }
 
-    // TODO [PHASE 3 - Syahru]: Relasi ke User
     public function user(): BelongsTo
     {
-        // TODO: return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class);
     }
 
-    // TODO [PHASE 3 - Syahru]: Relasi ke Order
     public function order(): BelongsTo
     {
-        // TODO: return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class);
     }
 
-    // TODO [PHASE 3 - Syahru]: Relasi ke AffiliateConversion
     public function conversion(): BelongsTo
     {
-        // TODO: return $this->belongsTo(AffiliateConversion::class, 'conversion_id');
+        return $this->belongsTo(AffiliateConversion::class, 'conversion_id');
     }
 }

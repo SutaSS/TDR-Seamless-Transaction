@@ -8,9 +8,15 @@ class WebhookEvent extends Model
 {
     public $timestamps = false;
 
-    // TODO [PHASE 1 - Andika]: Define $fillable sesuai kolom tabel webhook_events
-    protected $fillable = [];
+    protected $fillable = [
+        'source', 'event_id', 'external_id', 'payload_hash',
+        'signature_valid', 'process_status', 'error_message',
+        'raw_payload', 'received_at', 'processed_at',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Cast kolom enum & boolean
-    protected $casts = [];
+    protected $casts = [
+        'signature_valid' => 'boolean',
+        'received_at'     => 'datetime',
+        'processed_at'    => 'datetime',
+    ];
 }

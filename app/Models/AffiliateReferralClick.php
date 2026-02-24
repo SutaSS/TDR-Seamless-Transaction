@@ -10,18 +10,24 @@ class AffiliateReferralClick extends Model
 {
     public $timestamps = false;
 
-    // TODO [PHASE 1 - Andika]: Define $fillable sesuai kolom tabel affiliate_referral_clicks
-    protected $fillable = [];
+    protected $fillable = [
+        'affiliate_id', 'referral_code_snapshot', 'session_key',
+        'anonymized_ip', 'user_agent', 'landing_url',
+        'is_attributed', 'expires_at',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Relasi ke Affiliate
+    protected $casts = [
+        'is_attributed' => 'boolean',
+        'expires_at'    => 'datetime',
+    ];
+
     public function affiliate(): BelongsTo
     {
-        // TODO: return $this->belongsTo(Affiliate::class);
+        return $this->belongsTo(Affiliate::class);
     }
 
-    // TODO [PHASE 2 - Ghufron]: Relasi ke Orders (attributed orders)
     public function orders(): HasMany
     {
-        // TODO: return $this->hasMany(Order::class, 'referral_click_id');
+        return $this->hasMany(Order::class, 'referral_click_id');
     }
 }

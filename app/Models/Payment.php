@@ -7,15 +7,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
-    // TODO [PHASE 1 - Andika]: Define $fillable sesuai kolom tabel payments
-    protected $fillable = [];
+    protected $fillable = [
+        'order_id', 'gateway_provider', 'external_id', 'gateway_invoice_id',
+        'payment_method', 'invoice_url', 'amount', 'status',
+        'signature_valid', 'raw_payload', 'webhook_received_at', 'paid_at',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Cast kolom enum, decimal, boolean
-    protected $casts = [];
+    protected $casts = [
+        'amount'               => 'decimal:2',
+        'signature_valid'      => 'boolean',
+        'webhook_received_at'  => 'datetime',
+        'paid_at'              => 'datetime',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Relasi ke Order
     public function order(): BelongsTo
     {
-        // TODO: return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class);
     }
 }

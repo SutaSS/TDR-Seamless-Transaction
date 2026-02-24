@@ -9,21 +9,23 @@ class OrderItem extends Model
 {
     public $timestamps = false;
 
-    // TODO [PHASE 1 - Andika]: Define $fillable sesuai kolom tabel order_items
-    protected $fillable = [];
+    protected $fillable = [
+        'order_id', 'product_id', 'product_name_snapshot',
+        'qty', 'unit_price', 'line_total',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Cast kolom decimal
-    protected $casts = [];
+    protected $casts = [
+        'unit_price' => 'decimal:2',
+        'line_total' => 'decimal:2',
+    ];
 
-    // TODO [PHASE 1 - Andika]: Relasi ke Order
     public function order(): BelongsTo
     {
-        // TODO: return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class);
     }
 
-    // TODO [PHASE 1 - Andika]: Relasi ke Product (nullable)
     public function product(): BelongsTo
     {
-        // TODO: return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class);
     }
 }
