@@ -157,6 +157,11 @@ class CheckoutController extends Controller
                         'order_id'     => $orderNumber,
                         'gross_amount' => $total,
                     ],
+                    'callbacks' => [
+                        'finish'  => route('checkout.success') . '?order_id=' . $orderNumber,
+                        'error'   => route('checkout.failed'),
+                        'pending' => route('checkout.success') . '?order_id=' . $orderNumber,
+                    ],
                     'customer_details' => [
                         'first_name' => substr($validated['customer_name'], 0, 255),
                         'email'      => $validated['customer_email'],
