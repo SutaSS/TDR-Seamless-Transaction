@@ -31,7 +31,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('notifications', function (Blueprint $table) {
-            // TODO [PHASE 3 - Syahru]: Definisikan kolom di sini
+            $table->id();
+            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('order_id')->nullable()->constrained('orders')->nullOnDelete();
+            $table->unsignedBigInteger('conversion_id')->nullable();
+            $table->foreign('conversion_id')->references('id')->on('affiliate_conversions')->nullOnDelete();
+            $table->string('event_type');
+            $table->enum('channel', ['telegram'])->default('telegram');
+            $table->string('recipient_chat_id_snapshot')->nullable();
+            $table->string('template_key')->nullable();
+            $table->text('message_body');
+            $table->string('provider_message_id')->nullable();
+            $table->enum('status', ['queued', 'sent', 'failed'])->default('queued');
+            $table->unsignedInteger('retry_count')->default(0);
+            $table->text('last_error')->nullable();
+            $table->timestamp('sent_at')->nullable();
+            $table->timestamps();
         });
     }
 

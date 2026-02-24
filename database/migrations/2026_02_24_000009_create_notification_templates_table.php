@@ -23,7 +23,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('notification_templates', function (Blueprint $table) {
-            // TODO [PHASE 3 - Syahru]: Definisikan kolom di sini
+            $table->id();
+            $table->string('template_key')->unique();
+            $table->enum('channel', ['telegram'])->default('telegram');
+            $table->string('event_type');
+            $table->string('title')->nullable();
+            $table->text('body_template');
+            $table->boolean('is_active')->default(true);
+            $table->unsignedBigInteger('created_by_user_id')->nullable();
+            $table->foreign('created_by_user_id')->references('id')->on('users')->nullOnDelete();
+            $table->timestamps();
         });
     }
 

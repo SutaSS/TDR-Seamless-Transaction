@@ -23,7 +23,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
+            $table->id();
+            $table->string('sku')->unique()->nullable();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->decimal('price', 14, 2);
+            $table->decimal('commission_rate', 5, 2)->nullable();
+            $table->integer('stock')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
         });
     }
 

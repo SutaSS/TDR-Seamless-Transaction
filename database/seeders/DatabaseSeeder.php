@@ -18,8 +18,9 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            'name'  => 'Admin TDR',
+            'email' => 'admin@tdr.test',
+            'role'  => 'admin',
         ]);
 
         // TODO [PHASE 1 - Andika]: Jalankan AffiliateSeeder setelah migrations selesai

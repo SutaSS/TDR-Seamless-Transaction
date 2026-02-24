@@ -20,7 +20,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('system_configs', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
+            $table->id();
+            $table->string('config_key')->unique();
+            $table->text('config_value');
+            $table->boolean('is_secret')->default(false);
+            $table->unsignedBigInteger('updated_by_user_id')->nullable();
+            $table->foreign('updated_by_user_id')->references('id')->on('users')->nullOnDelete();
+            $table->timestamps();
         });
     }
 

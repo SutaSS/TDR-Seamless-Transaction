@@ -22,8 +22,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('order_items', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
-            // Note: no updated_at (sesuai schema)
+            $table->id();
+            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
+            $table->foreignId('product_id')->nullable()->constrained('products')->nullOnDelete();
+            $table->string('product_name_snapshot');
+            $table->unsignedInteger('qty');
+            $table->decimal('unit_price', 14, 2);
+            $table->decimal('line_total', 14, 2);
+            $table->timestamp('created_at')->useCurrent();
         });
     }
 

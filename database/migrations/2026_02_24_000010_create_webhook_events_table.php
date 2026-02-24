@@ -27,7 +27,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('webhook_events', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
+            $table->id();
+            $table->string('source');
+            $table->string('event_id')->nullable();
+            $table->string('external_id')->nullable()->index();
+            $table->string('payload_hash')->nullable();
+            $table->boolean('signature_valid')->default(false);
+            $table->enum('process_status', ['received', 'processed', 'duplicate', 'invalid_signature', 'failed'])->default('received');
+            $table->text('error_message')->nullable();
+            $table->text('raw_payload');
+            $table->timestamp('received_at');
+            $table->timestamp('processed_at')->nullable();
         });
     }
 

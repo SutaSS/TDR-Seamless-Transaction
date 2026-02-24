@@ -25,7 +25,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('affiliate_conversions', function (Blueprint $table) {
-            // TODO [PHASE 2 - Ghufron]: Definisikan kolom di sini
+            $table->id();
+            $table->foreignId('affiliate_id')->constrained('affiliates');
+            $table->foreignId('order_id')->unique()->constrained('orders');
+            $table->unsignedBigInteger('referral_click_id')->nullable();
+            $table->foreign('referral_click_id')->references('id')->on('affiliate_referral_clicks')->nullOnDelete();
+            $table->decimal('commission_rate', 5, 2);
+            $table->decimal('commission_amount', 14, 2);
+            $table->boolean('is_self_referral')->default(false);
+            $table->enum('status', ['pending', 'approved', 'paid', 'rejected'])->default('pending');
+            $table->timestamp('approved_at')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamps();
         });
     }
 

@@ -20,8 +20,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('settings_audit_logs', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
-            // Note: no updated_at
+            $table->id();
+            $table->foreignId('actor_user_id')->constrained('users');
+            $table->string('config_key');
+            $table->text('old_value_masked')->nullable();
+            $table->text('new_value_masked')->nullable();
+            $table->timestamp('created_at')->useCurrent();
         });
     }
 

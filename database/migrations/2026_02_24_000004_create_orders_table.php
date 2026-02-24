@@ -33,7 +33,26 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
+            $table->id();
+            $table->string('order_number')->unique();
+            $table->foreignId('customer_user_id')->constrained('users');
+            $table->foreignId('affiliate_id')->nullable()->constrained('affiliates')->nullOnDelete();
+            $table->unsignedBigInteger('referral_click_id')->nullable();
+            $table->foreign('referral_click_id')->references('id')->on('affiliate_referral_clicks')->nullOnDelete();
+            $table->decimal('subtotal_amount', 14, 2);
+            $table->decimal('discount_amount', 14, 2)->default(0);
+            $table->decimal('total_amount', 14, 2);
+            $table->string('currency', 10)->default('IDR');
+            $table->enum('order_status', ['pending', 'processing', 'shipped', 'delivered', 'cancelled'])->default('pending');
+            $table->enum('payment_status', ['unpaid', 'paid', 'expired', 'failed'])->default('unpaid');
+            $table->string('tracking_number')->nullable();
+            $table->string('shipping_provider')->nullable();
+            $table->string('customer_name')->nullable();
+            $table->string('customer_phone')->nullable();
+            $table->text('note')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamp('delivered_at')->nullable();
+            $table->timestamps();
         });
     }
 

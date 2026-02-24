@@ -26,7 +26,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('affiliate_referral_clicks', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
+            $table->id();
+            $table->foreignId('affiliate_id')->constrained('affiliates')->cascadeOnDelete();
+            $table->string('referral_code_snapshot');
+            $table->string('session_key')->nullable();
+            $table->string('anonymized_ip')->nullable();
+            $table->text('user_agent')->nullable();
+            $table->text('landing_url')->nullable();
+            $table->boolean('is_attributed')->default(false);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('expires_at')->nullable();
         });
     }
 

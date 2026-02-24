@@ -28,7 +28,20 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('payments', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
+            $table->id();
+            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
+            $table->string('gateway_provider');
+            $table->string('external_id')->unique();
+            $table->string('gateway_invoice_id')->nullable();
+            $table->string('payment_method')->nullable();
+            $table->text('invoice_url')->nullable();
+            $table->decimal('amount', 14, 2);
+            $table->enum('status', ['pending', 'paid', 'expired', 'failed'])->default('pending');
+            $table->boolean('signature_valid')->nullable();
+            $table->text('raw_payload')->nullable();
+            $table->timestamp('webhook_received_at')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamps();
         });
     }
 

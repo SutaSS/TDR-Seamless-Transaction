@@ -21,8 +21,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('order_status_histories', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
-            // Note: no updated_at
+            $table->id();
+            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
+            $table->enum('old_status', ['pending', 'processing', 'shipped', 'delivered', 'cancelled'])->nullable();
+            $table->enum('new_status', ['pending', 'processing', 'shipped', 'delivered', 'cancelled']);
+            $table->unsignedBigInteger('changed_by_user_id')->nullable();
+            $table->foreign('changed_by_user_id')->references('id')->on('users')->nullOnDelete();
+            $table->text('note')->nullable();
+            $table->timestamp('created_at')->useCurrent();
         });
     }
 

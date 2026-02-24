@@ -26,7 +26,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('affiliates', function (Blueprint $table) {
-            // TODO [PHASE 1 - Andika]: Definisikan kolom di sini
+            $table->id();
+            $table->foreignId('user_id')->unique()->constrained('users')->cascadeOnDelete();
+            $table->string('referral_code')->unique();
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('approved');
+            $table->decimal('commission_rate', 5, 2)->default(10.00);
+            $table->string('payout_method')->nullable();
+            $table->string('payout_account_name')->nullable();
+            $table->string('payout_account_number')->nullable();
+            $table->unsignedInteger('total_clicks')->default(0);
+            $table->unsignedInteger('total_conversions')->default(0);
+            $table->decimal('total_commission_amount', 14, 2)->default(0);
+            $table->timestamps();
         });
     }
 
