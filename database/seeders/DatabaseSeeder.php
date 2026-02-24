@@ -17,15 +17,19 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name'  => 'Admin TDR',
-            'email' => 'admin@tdr.test',
-            'role'  => 'admin',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'admin@tdr.test'],
+            [
+                'name'          => 'Admin TDR',
+                'password_hash' => bcrypt('admin123'),
+                'role'          => 'admin',
+                'is_active'     => true,
+            ]
+        );
 
-        // TODO [PHASE 1 - Andika]: Jalankan AffiliateSeeder setelah migrations selesai
         $this->call([
             AffiliateSeeder::class,
+            NotificationTemplateSeeder::class,
         ]);
     }
 }
