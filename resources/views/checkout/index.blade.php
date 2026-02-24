@@ -25,13 +25,13 @@
                             <div class="col-12">
                                 <label class="form-label">Nama Lengkap</label>
                                 <input type="text" name="customer_name" class="form-control @error('customer_name') is-invalid @enderror"
-                                       value="{{ old('customer_name') }}" required>
+                                       value="{{ old('customer_name', $user?->name) }}" required>
                                 @error('customer_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email</label>
                                 <input type="email" name="customer_email" class="form-control @error('customer_email') is-invalid @enderror"
-                                       value="{{ old('customer_email') }}" required>
+                                       value="{{ old('customer_email', $user?->email) }}" required>
                                 @error('customer_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">

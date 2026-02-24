@@ -28,22 +28,62 @@
         </button>
         <div class="collapse navbar-collapse" id="nav">
             <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="/">Beranda</a></li>
-                <li class="nav-item"><a class="nav-link" href="/checkout">Checkout</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ route('affiliate.register.form') }}">Affiliate</a></li>
-            </ul>
-            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="{{ route('home') }}">Beranda</a></li>
                 @auth
-                    @if(auth()->user()->role === 'admin')
-                        <li class="nav-item"><a class="nav-link" href="{{ route('admin.dashboard') }}">Admin</a></li>
-                        <li class="nav-item">
-                            <form method="POST" action="{{ route('admin.logout') }}" class="d-inline">
-                                @csrf <button class="btn btn-sm btn-outline-light ms-2">Logout</button>
-                            </form>
-                        </li>
+                    @if(auth()->user()->role !== 'admin')
+                        <li class="nav-item"><a class="nav-link" href="{{ route('checkout.form') }}">
+                            <i class="bi bi-cart3"></i> Beli Sekarang
+                        </a></li>
                     @endif
+                    @if(auth()->user()->role === 'customer')
+                        <li class="nav-item"><a class="nav-link" href="{{ route('affiliate.register.form') }}">
+                            <i class="bi bi-people"></i> Jadi Affiliate
+                        </a></li>
+                    @endif
+                    @if(auth()->user()->role === 'affiliate')
+                        <li class="nav-item"><a class="nav-link" href="{{ route('affiliate.dashboard') }}">
+                            <i class="bi bi-graph-up"></i> Dashboard Affiliate
+                        </a></li>
+                    @endif
+                    @if(auth()->user()->role === 'admin')
+                        <li class="nav-item"><a class="nav-link" href="{{ route('admin.dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Admin Panel
+                        </a></li>
+                    @endif
+                @endauth
+            </ul>
+            <ul class="navbar-nav align-items-center">
+                @auth
+                    <li class="nav-item me-2">
+                        <span class="navbar-text text-light small">
+                            <i class="bi bi-person-circle"></i>
+                            {{ auth()->user()->name }}
+                            @if(!auth()->user()->telegram_chat_id)
+                                <a href="{{ route('profile.edit') }}" class="badge bg-warning text-dark text-decoration-none ms-1" title="Hubungkan Telegram agar notifikasi pesanan dikirim">
+                                    <i class="bi bi-telegram"></i> Hubungkan Telegram
+                                </a>
+                            @endif
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                            @csrf
+                            <button class="btn btn-sm btn-outline-light">
+                                <i class="bi bi-box-arrow-right"></i> Keluar
+                            </button>
+                        </form>
+                    </li>
                 @else
-                    <li class="nav-item"><a class="nav-link" href="{{ route('admin.login') }}">Login Admin</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('login') }}">
+                            <i class="bi bi-box-arrow-in-right"></i> Masuk
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-sm btn-primary ms-1" href="{{ route('register') }}">
+                            Daftar
+                        </a>
+                    </li>
                 @endauth
             </ul>
         </div>
