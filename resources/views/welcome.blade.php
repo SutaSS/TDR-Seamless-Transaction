@@ -73,7 +73,7 @@
                 </div>
                 <div class="card-footer bg-white border-0 pb-3">
                     @auth
-                        <a href="{{ route('checkout.form') }}" class="btn btn-primary w-100">
+                        <a href="{{ route('checkout.form') }}?product_id={{ $product->id }}" class="btn btn-primary w-100">
                             <i class="bi bi-cart-plus"></i> Beli Sekarang
                         </a>
                     @else
