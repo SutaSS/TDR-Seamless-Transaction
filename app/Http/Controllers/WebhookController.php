@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\User;
+use App\Jobs\SendTelegramNotification;
 use App\Models\WebhookEvent;
 use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
@@ -148,16 +149,19 @@ class WebhookController extends Controller
                     $affiliate->increment('total_commission_amount', $commissionAmount);
                 }
 
-                // Insert Notification (status = queued, JANGAN kirim Telegram di sini)
-                Notification::create([
+                // Insert Notification (status = queued)
+                $notif = Notification::create([
                     'user_id'                    => $affiliate?->user_id ?? $customer->id,
                     'order_id'                   => $order->id,
                     'event_type'                 => 'order.paid',
                     'channel'                    => 'telegram',
                     'recipient_chat_id_snapshot' => $affiliate?->user?->telegram_chat_id,
-                    'message_body'               => "Pesanan #{$order->order_number} telah dibayar. Total: Rp " . number_format($grossAmount, 0, ',', '.'),
+                    'message_body'               => "*Pesanan Dibayar!*\nNomor: #{$order->order_number}\nTotal: Rp " . number_format($grossAmount, 0, ',', '.'),
                     'status'                     => 'queued',
                 ]);
+
+                // Dispatch Telegram notification job (database queue / sync)
+                SendTelegramNotification::dispatch($notif->id);
 
                 $this->logWebhook($externalId, $rawPayload, true, 'processed');
             });
