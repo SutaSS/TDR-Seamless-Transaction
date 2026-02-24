@@ -120,6 +120,30 @@ class AffiliateController extends Controller
     }
 
     /**
+     * PUT /affiliate/payout
+     * Simpan data rekening / e-wallet untuk pencairan komisi.
+     */
+    public function updatePayout(Request $request): RedirectResponse
+    {
+        if (! Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $affiliate = Affiliate::where('user_id', Auth::id())->firstOrFail();
+
+        $validated = $request->validate([
+            'payout_method'         => 'required|in:bank_bca,bank_bri,bank_bni,bank_mandiri,ovo,gopay,dana,shopeepay,manual',
+            'payout_account_name'   => 'required|string|max:255',
+            'payout_account_number' => 'required|string|max:100',
+        ]);
+
+        $affiliate->update($validated);
+
+        return redirect()->route('affiliate.dashboard')
+            ->with('success', 'Data rekening berhasil disimpan.');
+    }
+
+    /**
      * Capture referral click dari ?ref=CODE parameter.
      */
     public function captureReferral(Request $request): RedirectResponse

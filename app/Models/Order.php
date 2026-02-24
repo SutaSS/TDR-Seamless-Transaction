@@ -16,14 +16,16 @@ class Order extends Model
         'customer_name', 'customer_phone', 'note', 'paid_at', 'delivered_at',
         'shipping_address', 'shipping_city', 'shipping_province',
         'shipping_postal_code', 'shipping_courier', 'shipping_cost',
+        'status_changed_at',
     ];
 
     protected $casts = [
-        'subtotal_amount' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'total_amount'    => 'decimal:2',
-        'paid_at'         => 'datetime',
-        'delivered_at'    => 'datetime',
+        'subtotal_amount'  => 'decimal:2',
+        'discount_amount'  => 'decimal:2',
+        'total_amount'     => 'decimal:2',
+        'paid_at'          => 'datetime',
+        'delivered_at'     => 'datetime',
+        'status_changed_at'=> 'datetime',
     ];
 
     public function customer(): BelongsTo

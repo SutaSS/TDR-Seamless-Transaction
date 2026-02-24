@@ -49,6 +49,72 @@
         </div>
     </div>
 
+    {{-- ── Payout Identity ────────────────────────────────────────────────── --}}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-wallet2 text-success me-1"></i> Data Pencairan Komisi</span>
+            @if($affiliate->payout_account_number)
+                <span class="badge bg-success">Lengkap</span>
+            @else
+                <span class="badge bg-warning text-dark">Belum diisi</span>
+            @endif
+        </div>
+        <div class="card-body p-4">
+            @if(session('success'))
+                <div class="alert alert-success py-2">{{ session('success') }}</div>
+            @endif
+            <form method="POST" action="{{ route('affiliate.payout') }}">
+                @csrf
+                @method('PUT')
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Metode Pembayaran</label>
+                        <select name="payout_method" class="form-select @error('payout_method') is-invalid @enderror" required>
+                            <option value="">— Pilih —</option>
+                            @foreach([
+                                'ovo'          => 'OVO',
+                                'gopay'        => 'GoPay',
+                                'dana'         => 'DANA',
+                                'shopeepay'    => 'ShopeePay',
+                                'bank_bca'     => 'Bank BCA',
+                                'bank_bri'     => 'Bank BRI',
+                                'bank_bni'     => 'Bank BNI',
+                                'bank_mandiri' => 'Bank Mandiri',
+                                'manual'       => 'Manual / Lainnya',
+                            ] as $val => $label)
+                                <option value="{{ $val }}" {{ old('payout_method', $affiliate->payout_method) === $val ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('payout_method')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Nomor Rekening / Akun</label>
+                        <input type="text" name="payout_account_number"
+                               value="{{ old('payout_account_number', $affiliate->payout_account_number) }}"
+                               class="form-control @error('payout_account_number') is-invalid @enderror"
+                               placeholder="Contoh: 081234567890" required>
+                        @error('payout_account_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Nama Pemilik Akun</label>
+                        <input type="text" name="payout_account_name"
+                               value="{{ old('payout_account_name', $affiliate->payout_account_name) }}"
+                               class="form-control @error('payout_account_name') is-invalid @enderror"
+                               placeholder="Sesuai nama di aplikasi / buku tabungan" required>
+                        @error('payout_account_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-success fw-semibold px-4">
+                        <i class="bi bi-save me-1"></i> Simpan Data Rekening
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="row g-4">
         {{-- Chart --}}
         <div class="col-md-7">

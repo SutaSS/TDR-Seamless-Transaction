@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -16,14 +18,35 @@ class ProfileController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
+        $user = Auth::user();
+
         $validated = $request->validate([
-            'telegram_chat_id' => 'nullable|string|max:50',
             'name'             => 'required|string|max:255',
+            'phone'            => 'nullable|string|max:30',
+            'email'            => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'telegram_chat_id' => 'nullable|string|max:50',
         ]);
 
-        $user = Auth::user();
         $user->update($validated);
 
         return back()->with('success', 'Profil diperbarui.');
+    }
+
+    public function updatePassword(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password'         => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = Auth::user();
+
+        if (! Hash::check($request->current_password, $user->password_hash)) {
+            return back()->withErrors(['current_password' => 'Password lama tidak cocok.'])->withInput();
+        }
+
+        $user->update(['password_hash' => Hash::make($request->password)]);
+
+        return back()->with('success', 'Password berhasil diperbarui.');
     }
 }

@@ -34,8 +34,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 // Profil — untuk user yang sudah login
 // ---------------------------------------------------------------------------
 Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {
-    Route::get('/',  [ProfileController::class, 'edit'])->name('edit');
-    Route::put('/',  [ProfileController::class, 'update'])->name('update');
+    Route::get('/',         [ProfileController::class, 'edit'])->name('edit');
+    Route::put('/',         [ProfileController::class, 'update'])->name('update');
+    Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password');
 });
 
 // ---------------------------------------------------------------------------
@@ -55,6 +56,7 @@ Route::prefix('affiliate')->name('affiliate.')->group(function () {
     Route::get('/register',  [AffiliateController::class, 'showRegisterForm'])->name('register.form');
     Route::post('/register', [AffiliateController::class, 'register'])->name('register');
     Route::get('/dashboard', [AffiliateController::class, 'dashboard'])->name('dashboard');
+    Route::put('/payout',    [AffiliateController::class, 'updatePayout'])->name('payout');
 });
 
 // ---------------------------------------------------------------------------

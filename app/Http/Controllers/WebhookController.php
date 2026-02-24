@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Jobs\SendTelegramNotification;
 use App\Models\WebhookEvent;
 use App\Services\MidtransService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,10 @@ use Illuminate\Support\Str;
 
 class WebhookController extends Controller
 {
-    public function __construct(protected MidtransService $midtrans) {}
+    public function __construct(
+        protected MidtransService $midtrans,
+        protected NotificationService $notif,
+    ) {}
 
     /**
      * Handle incoming payment webhook from Midtrans.
@@ -58,110 +62,119 @@ class WebhookController extends Controller
 
         try {
             DB::transaction(function () use ($payload, $rawPayload, $externalId, $request) {
-                // Resolve atau buat customer user
-                $customer = $this->resolveCustomer($payload);
 
-                // Resolve affiliate dari cookie (jika ada)
-                $affiliate      = null;
-                $referralClick  = null;
-                $affiliateRef   = $request->cookie('affiliate_ref');
+                $existingOrder = Order::where('order_number', $externalId)->first();
+                $grossAmount   = (float) ($payload['gross_amount'] ?? 0);
 
-                if ($affiliateRef) {
-                    $affiliate = Affiliate::where('referral_code', $affiliateRef)->first();
-                    if ($affiliate) {
-                        $referralClick = AffiliateReferralClick::where('affiliate_id', $affiliate->id)
-                            ->where('is_attributed', false)
-                            ->latest('created_at')
-                            ->first();
+                if ($existingOrder) {
+                    // ── Case A: Order created by CheckoutController ──────────
+                    // Just update payment_status; Order model observer fires notification
+                    $existingOrder->update([
+                        'payment_status' => 'paid',
+                        'paid_at'        => now(),
+                    ]);
+                    $order = $existingOrder->fresh();
+
+                    // Record payment
+                    Payment::create([
+                        'order_id'            => $order->id,
+                        'gateway_provider'    => 'midtrans',
+                        'external_id'         => $externalId,
+                        'gateway_invoice_id'  => $payload['transaction_id'] ?? null,
+                        'payment_method'      => $payload['payment_type'] ?? null,
+                        'amount'              => $grossAmount,
+                        'status'              => 'paid',
+                        'signature_valid'     => true,
+                        'raw_payload'         => $rawPayload,
+                        'webhook_received_at' => now(),
+                        'paid_at'             => now(),
+                    ]);
+
+                } else {
+                    // ── Case B: Order does NOT exist (direct API / testing) ──
+                    $customer = $this->resolveCustomer($payload);
+
+                    $affiliate     = null;
+                    $referralClick = null;
+                    $affiliateRef  = $request->cookie('affiliate_ref');
+
+                    if ($affiliateRef) {
+                        $affiliate = Affiliate::where('referral_code', $affiliateRef)->first();
+                        if ($affiliate) {
+                            $referralClick = AffiliateReferralClick::where('affiliate_id', $affiliate->id)
+                                ->where('is_attributed', false)
+                                ->latest('created_at')
+                                ->first();
+                        }
                     }
-                }
 
-                $grossAmount = (float) ($payload['gross_amount'] ?? 0);
-
-                // Buat Order
-                $order = Order::create([
-                    'order_number'      => $externalId,
-                    'customer_user_id'  => $customer->id,
-                    'affiliate_id'      => $affiliate?->id,
-                    'referral_click_id' => $referralClick?->id,
-                    'subtotal_amount'   => $grossAmount,
-                    'discount_amount'   => 0,
-                    'total_amount'      => $grossAmount,
-                    'currency'          => 'IDR',
-                    'order_status'      => 'pending',
-                    'payment_status'    => 'paid',
-                    'customer_name'     => $payload['customer_details']['first_name'] ?? null,
-                    'customer_phone'    => $payload['customer_details']['phone'] ?? null,
-                    'paid_at'           => now(),
-                ]);
-
-                // Buat OrderItems dari item_details
-                $items = $payload['item_details'] ?? [];
-                foreach ($items as $item) {
-                    OrderItem::create([
-                        'order_id'             => $order->id,
-                        'product_id'           => null,
-                        'product_name_snapshot'=> $item['name'] ?? 'Unknown Product',
-                        'qty'                  => (int) ($item['quantity'] ?? 1),
-                        'unit_price'           => (float) ($item['price'] ?? 0),
-                        'line_total'           => (float) ($item['price'] ?? 0) * (int) ($item['quantity'] ?? 1),
-                    ]);
-                }
-
-                // Catat Payment record
-                Payment::create([
-                    'order_id'             => $order->id,
-                    'gateway_provider'     => 'midtrans',
-                    'external_id'          => $externalId,
-                    'gateway_invoice_id'   => $payload['transaction_id'] ?? null,
-                    'payment_method'       => $payload['payment_type'] ?? null,
-                    'amount'               => $grossAmount,
-                    'status'               => 'paid',
-                    'signature_valid'      => true,
-                    'raw_payload'          => $rawPayload,
-                    'webhook_received_at'  => now(),
-                    'paid_at'              => now(),
-                ]);
-
-                // Tandai referral click as attributed
-                if ($referralClick) {
-                    $referralClick->update(['is_attributed' => true]);
-                }
-
-                // Insert AffiliateConversion
-                if ($affiliate) {
-                    $isSelfReferral    = $affiliate->user_id === $customer->id;
-                    $commissionRate    = $affiliate->commission_rate;
-                    $commissionAmount  = round($grossAmount * ($commissionRate / 100), 2);
-
-                    AffiliateConversion::create([
-                        'affiliate_id'      => $affiliate->id,
-                        'order_id'          => $order->id,
-                        'referral_click_id' => $referralClick?->id,
-                        'commission_rate'   => $commissionRate,
-                        'commission_amount' => $commissionAmount,
-                        'is_self_referral'  => $isSelfReferral,
-                        'status'            => 'pending',
+                    $order = Order::create([
+                        'order_number'     => $externalId,
+                        'customer_user_id' => $customer->id,
+                        'affiliate_id'     => $affiliate?->id,
+                        'referral_click_id'=> $referralClick?->id,
+                        'subtotal_amount'  => $grossAmount,
+                        'discount_amount'  => 0,
+                        'total_amount'     => $grossAmount,
+                        'currency'         => 'IDR',
+                        'order_status'     => 'pending',
+                        'payment_status'   => 'paid',
+                        'customer_name'    => $payload['customer_details']['first_name'] ?? null,
+                        'customer_phone'   => $payload['customer_details']['phone'] ?? null,
+                        'paid_at'          => now(),
                     ]);
 
-                    // Update summary di tabel affiliates
-                    $affiliate->increment('total_conversions');
-                    $affiliate->increment('total_commission_amount', $commissionAmount);
+                    foreach ($payload['item_details'] ?? [] as $item) {
+                        OrderItem::create([
+                            'order_id'              => $order->id,
+                            'product_id'            => null,
+                            'product_name_snapshot' => $item['name'] ?? 'Unknown Product',
+                            'qty'                   => (int) ($item['quantity'] ?? 1),
+                            'unit_price'            => (float) ($item['price'] ?? 0),
+                            'line_total'            => (float) ($item['price'] ?? 0) * (int) ($item['quantity'] ?? 1),
+                        ]);
+                    }
+
+                    Payment::create([
+                        'order_id'            => $order->id,
+                        'gateway_provider'    => 'midtrans',
+                        'external_id'         => $externalId,
+                        'gateway_invoice_id'  => $payload['transaction_id'] ?? null,
+                        'payment_method'      => $payload['payment_type'] ?? null,
+                        'amount'              => $grossAmount,
+                        'status'              => 'paid',
+                        'signature_valid'     => true,
+                        'raw_payload'         => $rawPayload,
+                        'webhook_received_at' => now(),
+                        'paid_at'             => now(),
+                    ]);
+
+                    if ($referralClick) {
+                        $referralClick->update(['is_attributed' => true]);
+                    }
+
+                    if ($affiliate) {
+                        $commissionRate   = $affiliate->commission_rate;
+                        $commissionAmount = round($grossAmount * ($commissionRate / 100), 2);
+
+                        AffiliateConversion::create([
+                            'affiliate_id'      => $affiliate->id,
+                            'order_id'          => $order->id,
+                            'referral_click_id' => $referralClick?->id,
+                            'commission_rate'   => $commissionRate,
+                            'commission_amount' => $commissionAmount,
+                            'is_self_referral'  => $affiliate->user_id === $customer->id,
+                            'status'            => 'pending',
+                        ]);
+
+                        $affiliate->increment('total_conversions');
+                        $affiliate->increment('total_commission_amount', $commissionAmount);
+                    }
+
+                    // Trigger notification manually for case B (observer already fired for case A)
+                    $order->load('customer');
+                    $this->notif->notifyOrderStatus($order, 'payment.confirmed');
                 }
-
-                // Insert Notification (status = queued)
-                $notif = Notification::create([
-                    'user_id'                    => $affiliate?->user_id ?? $customer->id,
-                    'order_id'                   => $order->id,
-                    'event_type'                 => 'order.paid',
-                    'channel'                    => 'telegram',
-                    'recipient_chat_id_snapshot' => $affiliate?->user?->telegram_chat_id,
-                    'message_body'               => "*Pesanan Dibayar!*\nNomor: #{$order->order_number}\nTotal: Rp " . number_format($grossAmount, 0, ',', '.'),
-                    'status'                     => 'queued',
-                ]);
-
-                // Dispatch Telegram notification job (database queue / sync)
-                SendTelegramNotification::dispatch($notif->id);
 
                 $this->logWebhook($externalId, $rawPayload, true, 'processed');
             });
