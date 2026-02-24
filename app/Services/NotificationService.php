@@ -173,4 +173,76 @@ class NotificationService
 
         \App\Jobs\SendTelegramNotification::dispatch($notification->id);
     }
+
+    /**
+     * Notify affiliate when their commission is CONFIRMED (order delivered).
+     * Commission status moves pending → approved = siap dicairkan.
+     */
+    public function notifyAffiliateCommissionConfirmed(\App\Models\AffiliateConversion $conversion): void
+    {
+        $affiliate = $conversion->affiliate()->with('user')->first();
+        $chatId    = $affiliate?->user?->telegram_chat_id;
+
+        if (! $chatId) {
+            return;
+        }
+
+        $order      = $conversion->order;
+        $affName    = $affiliate->user->name;
+        $ordNum     = $order?->order_number ?? '—';
+        $commission = 'Rp ' . number_format((float) $conversion->commission_amount, 0, ',', '.');
+        $date       = \Illuminate\Support\Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+
+        $message = "*TDR-HPZ Affiliate* ✅\n\n"
+                 . "Halo *{$affName}*, komisi Anda sudah *dikonfirmasi*!\n\n"
+                 . "📦 Order: *{$ordNum}* telah diterima pembeli\n"
+                 . "💰 Komisi: *{$commission}*\n"
+                 . "📅 Waktu: {$date}\n\n"
+                 . "Komisi ini kini *siap dicairkan*. Buka dashboard affiliate dan klik *Cairkan Komisi* untuk mengajukan pencairan. 🎉";
+
+        $this->telegram->sendMessage($chatId, $message);
+    }
+
+    /**
+     * Notify affiliate (and optionally admin) when a payout is requested.
+     */
+    public function notifyAffiliatePayoutRequested(\App\Models\Affiliate $affiliate, float $amount): void
+    {
+        $chatId  = $affiliate->user?->telegram_chat_id;
+        $affName = $affiliate->user?->name ?? 'Affiliate';
+        $total   = 'Rp ' . number_format($amount, 0, ',', '.');
+        $method  = strtoupper($affiliate->payout_method ?? '-');
+        $account = $affiliate->payout_account_number ?? '-';
+        $date    = \Illuminate\Support\Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+
+        // Notify the affiliate
+        if ($chatId) {
+            $msg = "*TDR-HPZ Affiliate* 💸\n\n"
+                 . "Halo *{$affName}*, permintaan pencairan komisi Anda telah *diterima*!\n\n"
+                 . "💰 Total pencairan: *{$total}*\n"
+                 . "🏦 Metode: *{$method}*\n"
+                 . "📋 Nomor: *{$account}*\n"
+                 . "📅 Waktu pengajuan: {$date}\n\n"
+                 . "Dana akan ditransfer dalam *1–3 hari kerja*. Terima kasih! 🙏";
+
+            $this->telegram->sendMessage($chatId, $msg);
+        }
+
+        // Notify admin (first active admin with telegram_chat_id)
+        $admin = \App\Models\User::where('role', 'admin')
+            ->where('is_active', true)
+            ->whereNotNull('telegram_chat_id')
+            ->first();
+
+        if ($admin?->telegram_chat_id) {
+            $adminMsg = "*[Admin TDR-HPZ]* Permintaan Pencairan Komisi 💸\n\n"
+                      . "Affiliate: *{$affName}*\n"
+                      . "Total: *{$total}*\n"
+                      . "Metode: *{$method}* — {$account}\n"
+                      . "Waktu: {$date}\n\n"
+                      . "Harap proses transfer secepatnya. ✅";
+
+            $this->telegram->sendMessage($admin->telegram_chat_id, $adminMsg);
+        }
+    }
 }

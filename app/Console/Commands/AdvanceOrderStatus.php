@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\AffiliateConversion;
 use App\Models\Order;
 use App\Services\NotificationService;
 use Illuminate\Console\Command;
@@ -83,6 +84,16 @@ class AdvanceOrderStatus extends Command
                 $order->timestamps = true;
                 $order->refresh();
                 $this->notif->notifyOrderStatusSync($order, 'order.delivered');
+
+                // Confirm affiliate commission: pending → approved (siap dicairkan)
+                $conversion = AffiliateConversion::where('order_id', $order->id)
+                    ->where('status', 'pending')
+                    ->first();
+                if ($conversion) {
+                    $conversion->update(['status' => 'approved', 'approved_at' => now()]);
+                    $this->notif->notifyAffiliateCommissionConfirmed($conversion);
+                }
+
                 $advanced++;
                 $this->line("  🎉 #{$order->order_number}: shipped → delivered");
             });

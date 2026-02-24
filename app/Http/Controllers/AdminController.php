@@ -154,6 +154,15 @@ class AdminController extends Controller
         // Update triggers OrderObserver → NotificationService → kirim Telegram
         $order->update($updateData);
 
+        // Confirm affiliate commission when order delivered
+        if ($newStatus === 'delivered') {
+            $conversion = $order->conversion;
+            if ($conversion && $conversion->status === 'pending') {
+                $conversion->update(['status' => 'approved', 'approved_at' => now()]);
+                app(NotificationService::class)->notifyAffiliateCommissionConfirmed($conversion);
+            }
+        }
+
         OrderStatusHistory::create([
             'order_id'           => $order->id,
             'from_status'        => $oldStatus,

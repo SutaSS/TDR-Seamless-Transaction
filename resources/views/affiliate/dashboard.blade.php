@@ -66,7 +66,73 @@
             <div class="card p-3 text-center border-0 shadow-sm">
                 <div class="text-muted small">Total Komisi</div>
                 <div class="fs-5 fw-bold text-danger">Rp {{ number_format($stats['total_commission'], 0, ',', '.') }}</div>
+                <div class="text-muted" style="font-size:.7rem">semua status</div>
             </div>
+        </div>
+    </div>
+
+    {{-- ═════════════════════════════════════════════════════════════════════ --}}
+    {{-- Commission Breakdown + Payout Button --}}
+    {{-- ═════════════════════════════════════════════════════════════════════ --}}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-cash-coin text-warning me-1"></i> Status Komisi</span>
+            @if($commissionApproved > 0)
+                <span class="badge bg-success fs-6">
+                    Rp {{ number_format($commissionApproved, 0, ',', '.') }} siap dicairkan
+                </span>
+            @endif
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-4">
+                    <div class="rounded-3 p-3 text-center" style="background:#fff8e1">
+                        <div class="text-muted small mb-1">⏳ Menunggu Konfirmasi</div>
+                        <div class="fw-bold fs-5">Rp {{ number_format($commissionPending, 0, ',', '.') }}</div>
+                        <div class="text-muted" style="font-size:.7rem">Pesanan belum delivered</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="rounded-3 p-3 text-center" style="background:#e8f5e9">
+                        <div class="text-muted small mb-1">✅ Siap Dicairkan</div>
+                        <div class="fw-bold fs-5 text-success">Rp {{ number_format($commissionApproved, 0, ',', '.') }}</div>
+                        <div class="text-muted" style="font-size:.7rem">Pesanan sudah delivered</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="rounded-3 p-3 text-center" style="background:#e3f2fd">
+                        <div class="text-muted small mb-1">💸 Sudah Dicairkan</div>
+                        <div class="fw-bold fs-5 text-primary">Rp {{ number_format($commissionPaid, 0, ',', '.') }}</div>
+                        <div class="text-muted" style="font-size:.7rem">Total payout</div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Payout button --}}
+            @if($commissionApproved > 0 && $affiliate->payout_account_number)
+                @php
+                    $confirmMsg = 'Ajukan pencairan Rp ' . number_format($commissionApproved, 0, ',', '.') . ' ke ' . ($affiliate->payout_method ? strtoupper($affiliate->payout_method) : '-') . ' ' . $affiliate->payout_account_number . '?';
+                @endphp
+                <form method="POST" action="{{ route('affiliate.payout.request') }}"
+                      onsubmit="return confirm({{ json_encode($confirmMsg) }})">
+                    @csrf
+                    <button type="submit" class="btn btn-success btn-lg px-5 fw-semibold">
+                        <i class="bi bi-send-check me-2"></i>
+                        Cairkan Komisi &mdash; Rp {{ number_format($commissionApproved, 0, ',', '.') }}
+                    </button>
+                </form>
+            @elseif($commissionApproved > 0 && !$affiliate->payout_account_number)
+                <div class="alert alert-warning py-2 mb-0">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Ada <strong>Rp {{ number_format($commissionApproved, 0, ',', '.') }}</strong> siap dicairkan,
+                    tapi data rekening belum lengkap! Isi form rekening di bawah dulu.
+                </div>
+            @else
+                <div class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Belum ada komisi yang siap dicairkan. Komisi akan terkonfirmasi otomatis setelah pesanan diterima pembeli.
+                </div>
+            @endif
         </div>
     </div>
 
@@ -158,9 +224,7 @@
                         </div>
                         <div class="text-end">
                             <div class="fw-bold small">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</div>
-                            <span class="badge bg-{{ match($order->order_status) {
-                                'paid'=>'primary','shipped'=>'info text-dark','delivered'=>'success',default=>'secondary'
-                            } }}" style="font-size:.7rem">{{ $order->order_status }}</span>
+                            <span class="badge badge-{{ $order->order_status }}" style="font-size:.7rem">{{ $order->order_status }}</span>
                         </div>
                     </li>
                 @empty
@@ -169,6 +233,72 @@
                 </ul>
             </div>
         </div>
+    </div>
+
+
+    {{-- ══ Conversions Table ══ --}}
+    <div class="card shadow-sm mt-4 mb-5">
+        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-table text-primary me-1"></i> Riwayat Komisi</span>
+            <span class="badge bg-secondary">{{ $conversions->count() }} konversi</span>
+        </div>
+        @if($conversions->isEmpty())
+            <div class="card-body text-center text-muted py-4">
+                <i class="bi bi-inbox display-5"></i>
+                <p class="mt-2">Belum ada konversi. Mulai bagikan link referral Anda!</p>
+            </div>
+        @else
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Pesanan</th>
+                        <th>Tanggal</th>
+                        <th class="text-end">Nilai Order</th>
+                        <th class="text-end">Komisi</th>
+                        <th class="text-center">Status Komisi</th>
+                        <th class="text-center">Status Order</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach($conversions as $conv)
+                    @php
+                        $commStatusBadge = match($conv->status) {
+                            'pending'  => ['bg-warning text-dark', '⏳ Menunggu'],
+                            'approved' => ['bg-success',           '✅ Siap Cairkan'],
+                            'paid'     => ['bg-primary',           '💸 Dicairkan'],
+                            'rejected' => ['bg-danger',            '❌ Ditolak'],
+                            default    => ['bg-secondary',         $conv->status],
+                        };
+                    @endphp
+                    <tr>
+                        <td class="fw-semibold font-monospace">
+                            <a href="{{ route('orders.show', $conv->order_id) }}" class="text-decoration-none">
+                                #{{ $conv->order?->order_number ?? $conv->order_id }}
+                            </a>
+                        </td>
+                        <td class="text-muted">{{ $conv->created_at->format('d/m/Y H:i') }}</td>
+                        <td class="text-end">Rp {{ number_format($conv->order?->total_amount ?? 0, 0, ',', '.') }}</td>
+                        <td class="text-end fw-semibold text-success">Rp {{ number_format($conv->commission_amount, 0, ',', '.') }}</td>
+                        <td class="text-center">
+                            <span class="badge {{ $commStatusBadge[0] }}">{{ $commStatusBadge[1] }}</span>
+                            @if($conv->paid_at)
+                                <div class="text-muted" style="font-size:.68rem">{{ $conv->paid_at->format('d/m/Y') }}</div>
+                            @elseif($conv->approved_at)
+                                <div class="text-muted" style="font-size:.68rem">{{ $conv->approved_at->format('d/m/Y') }}</div>
+                            @endif
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-{{ $conv->order?->order_status ?? 'secondary' }}">
+                                {{ $conv->order?->order_status ?? '-' }}
+                            </span>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endif
     </div>
 </div>
 @endsection

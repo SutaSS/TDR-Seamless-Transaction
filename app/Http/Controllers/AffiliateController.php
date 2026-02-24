@@ -6,6 +6,7 @@ use App\Models\Affiliate;
 use App\Models\AffiliateConversion;
 use App\Models\AffiliateReferralClick;
 use App\Models\Order;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,7 @@ use Illuminate\View\View;
 
 class AffiliateController extends Controller
 {
+    public function __construct(private NotificationService $notif) {}
     /**
      * GET /affiliate/register
      * Harus login terlebih dahulu.
@@ -102,6 +104,18 @@ class AffiliateController extends Controller
         $conversionRate   = $totalClicks > 0 ? round(($totalConversions / $totalClicks) * 100, 1) : 0;
         $totalCommission  = AffiliateConversion::where('affiliate_id', $affiliate->id)->sum('commission_amount');
 
+        // Commission breakdown by status
+        $commissionPending  = AffiliateConversion::where('affiliate_id', $affiliate->id)->where('status', 'pending')->sum('commission_amount');
+        $commissionApproved = AffiliateConversion::where('affiliate_id', $affiliate->id)->where('status', 'approved')->sum('commission_amount');
+        $commissionPaid     = AffiliateConversion::where('affiliate_id', $affiliate->id)->where('status', 'paid')->sum('commission_amount');
+
+        // Conversions for table (recent 20)
+        $conversions = AffiliateConversion::where('affiliate_id', $affiliate->id)
+            ->with('order')
+            ->latest()
+            ->limit(20)
+            ->get();
+
         $recentOrders = Order::with(['items'])
             ->where('affiliate_id', $affiliate->id)
             ->whereIn('order_status', ['processing', 'shipped', 'delivered'])
@@ -120,7 +134,45 @@ class AffiliateController extends Controller
 
         $referralLink = url('/?ref=' . $affiliate->referral_code);
 
-        return view('affiliate.dashboard', compact('affiliate', 'stats', 'recentOrders', 'chartData', 'referralLink'));
+        return view('affiliate.dashboard', compact(
+            'affiliate', 'stats', 'recentOrders', 'chartData', 'referralLink',
+            'conversions', 'commissionPending', 'commissionApproved', 'commissionPaid'
+        ));
+    }
+
+    /**
+     * POST /affiliate/request-payout
+     * Request disbursement of all approved (confirmed) commissions.
+     */
+    public function requestPayout(): RedirectResponse
+    {
+        $affiliate = Affiliate::where('user_id', Auth::id())
+            ->where('status', 'approved')
+            ->firstOrFail();
+
+        $approved = AffiliateConversion::where('affiliate_id', $affiliate->id)
+            ->where('status', 'approved')
+            ->get();
+
+        if ($approved->isEmpty()) {
+            return back()->with('error', 'Tidak ada komisi yang siap dicairkan saat ini.');
+        }
+
+        $total = $approved->sum('commission_amount');
+
+        // Mark all approved conversions as paid
+        AffiliateConversion::where('affiliate_id', $affiliate->id)
+            ->where('status', 'approved')
+            ->update(['status' => 'paid', 'paid_at' => now()]);
+
+        // Notify affiliate + admin
+        $this->notif->notifyAffiliatePayoutRequested($affiliate, (float) $total);
+
+        return back()->with(
+            'success',
+            '✅ Permintaan pencairan sebesar Rp ' . number_format($total, 0, ',', '.') .
+            ' berhasil diajukan! Dana akan ditransfer dalam 1–3 hari kerja.'
+        );
     }
 
     /**
