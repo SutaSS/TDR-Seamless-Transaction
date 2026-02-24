@@ -8,9 +8,14 @@ use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $products = Product::active()->get();
-        return view('welcome', compact('products'));
+        $search   = $request->query('search', '');
+        $products = Product::active()
+            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%"))
+            ->get();
+
+        return view('welcome', compact('products', 'search'));
     }
 }

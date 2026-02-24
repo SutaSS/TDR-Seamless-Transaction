@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Services\MidtransService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -33,7 +34,8 @@ class CheckoutController extends Controller
             ? Affiliate::where('referral_code', $affiliateCode)->first()
             : null;
 
-        return view('checkout.index', compact('products', 'affiliate'));
+        $user = Auth::user();
+        return view('checkout.index', compact('products', 'affiliate', 'user'));
     }
 
     /**
@@ -91,7 +93,7 @@ class CheckoutController extends Controller
                 // Buat order (pending, akan di-update webhook ke paid)
                 $order = Order::create([
                     'order_number'     => $orderNumber,
-                    'customer_user_id' => null, // guest — akan di-resolve saat webhook
+                    'customer_user_id' => Auth::id(),
                     'affiliate_id'     => $affiliate?->id,
                     'referral_click_id'=> $referralClick?->id,
                     'subtotal_amount'  => $subtotal,
@@ -99,7 +101,7 @@ class CheckoutController extends Controller
                     'total_amount'     => $subtotal,
                     'currency'         => 'IDR',
                     'order_status'     => 'pending',
-                    'payment_status'   => 'pending',
+                    'payment_status'   => 'unpaid',
                     'customer_name'    => $validated['customer_name'],
                     'customer_phone'   => $validated['customer_phone'] ?? null,
                 ]);
