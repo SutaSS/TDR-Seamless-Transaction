@@ -13,6 +13,7 @@ use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
@@ -277,7 +278,8 @@ class AdminController extends Controller
     {
         $this->ensureAdmin();
 
-        $status      = $request->get('status', 'pending');
+        $allowed = ['pending', 'completed', 'rejected', 'all'];
+        $status  = in_array($request->get('status'), $allowed) ? $request->get('status') : 'pending';
         $withdrawals = AffiliateWithdrawal::with(['affiliate.affiliateProfile'])
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
             ->latest()
@@ -294,18 +296,30 @@ class AdminController extends Controller
     {
         $this->ensureAdmin();
 
-        if ($withdrawal->status !== 'pending') {
+        $profile = null;
+
+        DB::transaction(function () use ($withdrawal, &$profile) {
+            // Pessimistic lock — prevents double-approval on concurrent requests
+            $locked = AffiliateWithdrawal::lockForUpdate()->find($withdrawal->id);
+
+            if ($locked->status !== 'pending') {
+                return;
+            }
+
+            $locked->update([
+                'status'       => 'completed',
+                'processed_at' => now(),
+                'processed_by' => Auth::id(),
+            ]);
+
+            $withdrawal->refresh();
+            $profile = $withdrawal->affiliate->affiliateProfile ?? null;
+        });
+
+        if ($withdrawal->status !== 'completed') {
             return back()->with('error', 'Permintaan ini sudah diproses.');
         }
 
-        $withdrawal->update([
-            'status'       => 'completed',
-            'processed_at' => now(),
-            'processed_by' => Auth::id(),
-        ]);
-
-        // Notify affiliate via Telegram
-        $profile = $withdrawal->affiliate->affiliateProfile ?? null;
         if ($profile) {
             $this->notificationService->notifyAffiliateWithdrawalProcessed($profile, $withdrawal, true);
         }
@@ -318,26 +332,41 @@ class AdminController extends Controller
     {
         $this->ensureAdmin();
 
-        if ($withdrawal->status !== 'pending') {
+        $validated = $request->validate([
+            'rejection_reason' => 'nullable|string|max:500',
+        ]);
+
+        $reason  = trim($validated['rejection_reason'] ?? '') ?: 'Ditolak oleh admin.';
+        $profile = null;
+
+        DB::transaction(function () use ($withdrawal, $reason, &$profile) {
+            // Pessimistic lock — prevents double-refund on concurrent requests
+            $locked = AffiliateWithdrawal::lockForUpdate()->find($withdrawal->id);
+
+            if ($locked->status !== 'pending') {
+                return;
+            }
+
+            // Refund the balance back to the affiliate profile
+            $profile = $withdrawal->affiliate->affiliateProfile ?? null;
+            if ($profile) {
+                $profile->increment('balance', $withdrawal->amount);
+            }
+
+            $locked->update([
+                'status'           => 'rejected',
+                'processed_at'     => now(),
+                'processed_by'     => Auth::id(),
+                'rejection_reason' => $reason,
+            ]);
+
+            $withdrawal->refresh();
+        });
+
+        if ($withdrawal->status !== 'rejected') {
             return back()->with('error', 'Permintaan ini sudah diproses.');
         }
 
-        $reason = $request->input('rejection_reason', 'Ditolak oleh admin.');
-
-        // Refund the balance back to the affiliate profile
-        $profile = $withdrawal->affiliate->affiliateProfile ?? null;
-        if ($profile) {
-            $profile->increment('balance', $withdrawal->amount);
-        }
-
-        $withdrawal->update([
-            'status'           => 'rejected',
-            'processed_at'     => now(),
-            'processed_by'     => Auth::id(),
-            'rejection_reason' => $reason,
-        ]);
-
-        // Notify affiliate via Telegram
         if ($profile) {
             $this->notificationService->notifyAffiliateWithdrawalProcessed($profile, $withdrawal, false, $reason);
         }

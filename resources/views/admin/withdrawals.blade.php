@@ -58,6 +58,8 @@
                         'rejected'  => ['rgba(230,57,70,0.15)',  '#ff6b7a'],
                         default     => ['rgba(107,114,128,0.15)','#9ca3af'],
                     };
+                    $amountFormatted = 'Rp ' . number_format((float)$w->amount, 0, ',', '.');
+                    $safeName        = addslashes($w->affiliate?->name ?? '');
                     $statusLabel = match($w->status) {
                         'completed' => 'Selesai',
                         'pending'   => 'Pending',
@@ -117,7 +119,7 @@
                                 <form method="POST" action="{{ route('admin.withdrawals.approve', $w) }}">
                                     @csrf
                                     <button type="submit" class="btn btn-success btn-sm py-0 px-2"
-                                        onclick="return confirm('Setujui pencairan Rp {{ number_format((float)$w->amount, 0, \",\", \".\") }} untuk {{ $w->affiliate?->name }}?')">
+                                        onclick="return confirm('Setujui pencairan {{ $amountFormatted }} untuk {{ $safeName }}?')">
                                         <i class="bi bi-check-lg"></i> Setujui
                                     </button>
                                 </form>
