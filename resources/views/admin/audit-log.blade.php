@@ -76,21 +76,7 @@
         </table>
     </div>
     @if($logs->hasPages())
-        <div class="card-footer d-flex justify-content-center py-2">
-            <div class="d-flex align-items-center gap-3">
-                @if($logs->onFirstPage())
-                    <span class="btn btn-sm btn-outline-secondary disabled">‹ Sebelumnya</span>
-                @else
-                    <a href="{{ $logs->previousPageUrl() }}&search={{ request('search') }}" class="btn btn-sm btn-outline-secondary">‹ Sebelumnya</a>
-                @endif
-                <span class="text-muted small">{{ $logs->currentPage() }} / {{ $logs->lastPage() }}</span>
-                @if($logs->hasMorePages())
-                    <a href="{{ $logs->nextPageUrl() }}&search={{ request('search') }}" class="btn btn-sm btn-outline-secondary">Berikutnya ›</a>
-                @else
-                    <span class="btn btn-sm btn-outline-secondary disabled">Berikutnya ›</span>
-                @endif
-            </div>
-        </div>
+        <div class="card-footer">{{ $logs->links() }}</div>
     @endif
 </div>
 @endsection

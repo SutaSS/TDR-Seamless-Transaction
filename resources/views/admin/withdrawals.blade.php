@@ -182,21 +182,7 @@
         </table>
     </div>
     @if($withdrawals->hasPages())
-        <div class="card-footer d-flex justify-content-center py-2">
-            <div class="d-flex align-items-center gap-3">
-                @if($withdrawals->onFirstPage())
-                    <span class="btn btn-sm btn-outline-secondary disabled">‹ Sebelumnya</span>
-                @else
-                    <a href="{{ $withdrawals->previousPageUrl() }}&status={{ $status }}" class="btn btn-sm btn-outline-secondary">‹ Sebelumnya</a>
-                @endif
-                <span class="text-muted small">{{ $withdrawals->currentPage() }} / {{ $withdrawals->lastPage() }}</span>
-                @if($withdrawals->hasMorePages())
-                    <a href="{{ $withdrawals->nextPageUrl() }}&status={{ $status }}" class="btn btn-sm btn-outline-secondary">Berikutnya ›</a>
-                @else
-                    <span class="btn btn-sm btn-outline-secondary disabled">Berikutnya ›</span>
-                @endif
-            </div>
-        </div>
+        <div class="card-footer">{{ $withdrawals->links() }}</div>
     @endif
 </div>
 @endsection

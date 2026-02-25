@@ -36,7 +36,7 @@
         /* ── Sidebar ─────────────────────────────────────────────── */
         .adm-sidebar {
             width: 240px;
-            min-height: 100vh;
+            height: 100vh;
             background: var(--adm-sidebar);
             border-right: 1px solid var(--adm-border);
             position: fixed;
@@ -45,6 +45,7 @@
             z-index: 1000;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         .adm-sidebar .brand {
             padding: 20px 20px 16px;
@@ -81,6 +82,8 @@
         .adm-sidebar .nav-section {
             padding: 16px 12px;
             flex: 1;
+            overflow-y: auto;
+            min-height: 0;
         }
         .adm-sidebar .nav-label {
             font-size: 0.65rem;
@@ -316,12 +319,24 @@
             border-color: var(--adm-border);
             color: var(--adm-muted);
             font-size: 0.82rem;
+            border-radius: 6px !important;
         }
         .pagination .page-item.active .page-link {
             background: var(--adm-red);
             border-color: var(--adm-red);
             color: #fff;
         }
+        .pagination .page-item.disabled .page-link {
+            background: rgba(255,255,255,0.02);
+            border-color: var(--adm-border);
+            color: rgba(255,255,255,0.2);
+        }
+        .pagination .page-link:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+            color: var(--adm-text);
+        }
+        .pagination { margin-bottom: 0; gap: 3px; }
 
         /* ── List Groups ─────────────────────────────────────────── */
         .list-group-item {

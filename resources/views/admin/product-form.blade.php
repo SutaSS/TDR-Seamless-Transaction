@@ -47,10 +47,12 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold small">Kategori</label>
-                            <input type="text" name="category" value="{{ old('category', $product?->category) }}"
-                                class="form-control form-control-sm"
-                                style="background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.15);color:#e2e8f0"
-                                placeholder="Knalpot, Filter…">
+                            <select name="category" class="form-select form-select-sm"
+                                style="background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.15);color:#e2e8f0">
+                                @foreach(['Rantai','Shockbreaker','Kampas Rem','Gear Sprocket','Oli','Aksesoris','Motor','Lainnya'] as $cat)
+                                    <option value="{{ $cat }}" {{ old('category', $product?->category) === $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
 

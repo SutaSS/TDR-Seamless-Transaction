@@ -206,9 +206,45 @@ class AdminController extends Controller
             'event' => 'required|string',
         ]);
 
-        $this->notificationService->notifyOrderStatus($order, $request->event);
+        $event = $request->event;
 
-        return back()->with('success', 'Notifikasi berhasil dikirim.');
+        // Map event → new order status (if applicable)
+        $statusMap = [
+            'order.processing' => 'processing',
+            'order.shipped'    => 'shipped',
+            'order.delivered'  => 'completed',
+        ];
+
+        if (isset($statusMap[$event])) {
+            $newStatus = $statusMap[$event];
+            $updates   = ['status' => $newStatus];
+
+            if ($newStatus === 'shipped')    $updates['shipped_at']   = now();
+            if ($newStatus === 'completed')  $updates['completed_at'] = now();
+
+            Order::withoutObservers(fn () => $order->update($updates));
+
+            $label = [
+                'processing' => 'Sedang Diproses',
+                'shipped'    => 'Pesanan Dikirim',
+                'completed'  => 'Pesanan Diterima',
+            ][$newStatus];
+
+            TrackingLog::create([
+                'order_id'     => $order->id,
+                'status_title' => $label,
+                'description'  => 'Status diperbarui melalui notifikasi manual.',
+            ]);
+
+            // Credit affiliate commission on completion
+            if ($newStatus === 'completed') {
+                $this->notificationService->notifyAffiliateBalanceCredited($order->fresh());
+            }
+        }
+
+        $this->notificationService->notifyOrderStatus($order->fresh(), $event);
+
+        return back()->with('success', 'Notifikasi terkirim dan status pesanan diperbarui.');
     }
 
     /** POST /admin/orders/{order}/simulate-payment (local only) */

@@ -98,21 +98,7 @@
         </table>
     </div>
     @if($commissions->hasPages())
-        <div class="card-footer d-flex justify-content-center py-2">
-            <div class="d-flex align-items-center gap-3">
-                @if($commissions->onFirstPage())
-                    <span class="btn btn-sm btn-outline-secondary disabled">‹ Sebelumnya</span>
-                @else
-                    <a href="{{ $commissions->previousPageUrl() }}&status={{ request('status') }}" class="btn btn-sm btn-outline-secondary">‹ Sebelumnya</a>
-                @endif
-                <span class="text-muted small">{{ $commissions->currentPage() }} / {{ $commissions->lastPage() }}</span>
-                @if($commissions->hasMorePages())
-                    <a href="{{ $commissions->nextPageUrl() }}&status={{ request('status') }}" class="btn btn-sm btn-outline-secondary">Berikutnya ›</a>
-                @else
-                    <span class="btn btn-sm btn-outline-secondary disabled">Berikutnya ›</span>
-                @endif
-            </div>
-        </div>
+        <div class="card-footer">{{ $commissions->links() }}</div>
     @endif
 </div>
 @endsection

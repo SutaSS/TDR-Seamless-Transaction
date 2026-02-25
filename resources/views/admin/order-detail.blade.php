@@ -150,10 +150,11 @@
                         <label class="form-label">Pilih Event</label>
                         <select name="event" class="form-select">
                             <option value="payment.confirmed">Pembayaran Dikonfirmasi</option>
-                            <option value="order.processing">Sedang Diproses</option>
-                            <option value="order.shipped">Pesanan Dikirim</option>
-                            <option value="order.delivered">Pesanan Diterima</option>
+                            <option value="order.processing">Sedang Diproses <span class="text-muted">(ubah status → processing)</span></option>
+                            <option value="order.shipped">Pesanan Dikirim <span class="text-muted">(ubah status → shipped)</span></option>
+                            <option value="order.delivered">Pesanan Diterima <span class="text-muted">(ubah status → completed)</span></option>
                         </select>
+                        <div class="form-text" style="color:var(--adm-muted)">Event bertanda → akan otomatis memperbarui status pesanan.</div>
                     </div>
                     <button type="submit" class="btn btn-success btn-sm">
                         <i class="bi bi-send me-1"></i> Kirim Sekarang
