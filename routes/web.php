@@ -5,12 +5,11 @@ use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-// ---------------------------------------------------------------------------
 // Homepage — capture referral jika ada ?ref=CODE
-// ---------------------------------------------------------------------------
 Route::get('/', function (\Illuminate\Http\Request $request) {
     if ($request->has('ref')) {
         return app(AffiliateController::class)->captureReferral($request);
@@ -18,14 +17,10 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
     return app(HomeController::class)->index($request);
 })->name('home');
 
-// ---------------------------------------------------------------------------
 // Shop / Product Catalog
-// ---------------------------------------------------------------------------
 Route::get('/shop', [HomeController::class, 'shop'])->name('shop');
 
-// ---------------------------------------------------------------------------
-// Auth (Register & Login) — hanya untuk guest
-// ---------------------------------------------------------------------------
+//Auth (Register & Login) — hanya untuk guest
 Route::middleware('guest')->group(function () {
     Route::get('/register',  [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.post');
@@ -35,18 +30,19 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-// ---------------------------------------------------------------------------
 // Profil — untuk user yang sudah login
-// ---------------------------------------------------------------------------
 Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {
     Route::get('/',         [ProfileController::class, 'edit'])->name('edit');
     Route::put('/',         [ProfileController::class, 'update'])->name('update');
     Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password');
 });
 
-// ---------------------------------------------------------------------------
+//Order Tracking — harus login
+Route::middleware('auth')->group(function () {
+    Route::get('/orders/{orderNumber}', [OrderController::class, 'track'])->name('orders.track');
+});
+
 // Checkout — harus login sebagai customer/affiliate
-// ---------------------------------------------------------------------------
 Route::prefix('checkout')->name('checkout.')->middleware('auth')->group(function () {
     Route::get('/',        [CheckoutController::class, 'showForm'])->name('form');
     Route::post('/',       [CheckoutController::class, 'process'])->name('process');
@@ -54,9 +50,7 @@ Route::prefix('checkout')->name('checkout.')->middleware('auth')->group(function
     Route::get('/failed',  [CheckoutController::class, 'failed'])->name('failed');
 });
 
-// ---------------------------------------------------------------------------
 // Affiliate
-// ---------------------------------------------------------------------------
 Route::prefix('affiliate')->name('affiliate.')->group(function () {
     Route::get('/register',  [AffiliateController::class, 'showRegisterForm'])->name('register.form');
     Route::post('/register', [AffiliateController::class, 'register'])->name('register');
@@ -64,10 +58,7 @@ Route::prefix('affiliate')->name('affiliate.')->group(function () {
     Route::put('/payout',    [AffiliateController::class, 'updatePayout'])->name('payout');
 });
 
-// ---------------------------------------------------------------------------
 // Admin
-// ---------------------------------------------------------------------------
-Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login',  [AdminController::class, 'showLogin'])->name('login');
     Route::post('/login', [AdminController::class, 'login'])->name('login.post');
 
@@ -85,7 +76,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/affiliates/{affiliate}/reject',  [AdminController::class, 'rejectAffiliate'])->name('affiliates.reject');
         Route::get('/notifications',         [AdminController::class, 'notifications'])->name('notifications');
     });
-});
 
 // ---------------------------------------------------------------------------
 // Webhook — lihat routes/api.php (POST /api/webhook/payment)

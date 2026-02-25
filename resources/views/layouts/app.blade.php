@@ -177,6 +177,15 @@
             background-color: var(--tdr-red);
             border-color: var(--tdr-red);
         }
+        .form-select option,
+        .form-select optgroup {
+            background: #1a1a2e;
+            color: var(--tdr-text);
+        }
+        .form-select option:checked {
+            background: var(--tdr-red);
+            color: #fff;
+        }
         .invalid-feedback { font-size: 0.8rem; }
 
         /* ── Buttons ─────────────────────────────────────────────── */
@@ -498,6 +507,63 @@
     @yield('content')
 </main>
 
+{{-- ── Telegram Setup Modal (muncul setelah login jika belum punya chat_id) ── --}}
+@if(session('show_telegram_modal'))
+@php $botUsername = config('services.telegram.bot_username', 'TDRHPZBot'); @endphp
+<div class="modal fade" id="telegramSetupModal" tabindex="-1" aria-labelledby="telegramSetupLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--tdr-surface);border:1px solid var(--tdr-border);border-radius:16px;color:var(--tdr-text)">
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <div style="width:64px;height:64px;border-radius:50%;background:rgba(0,136,204,.15);border:1px solid rgba(0,136,204,.3);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+                        <i class="bi bi-telegram" style="font-size:1.75rem;color:#5eb8d4"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1" id="telegramSetupLabel">Aktifkan Notifikasi Telegram</h5>
+                    <p style="font-size:.875rem;color:var(--tdr-muted)" class="mb-0">
+                        Dapatkan update pesanan langsung di Telegram — konfirmasi bayar, pengiriman, dan selesai.
+                    </p>
+                </div>
+
+                <div class="p-3 rounded-3 mb-3" style="background:rgba(255,255,255,.04);border:1px solid var(--tdr-border);font-size:.85rem">
+                    <div class="d-flex gap-3 mb-2">
+                        <span class="fw-bold" style="color:var(--tdr-gold);min-width:18px">1</span>
+                        <span>Buka bot <strong>@{{ $botUsername }}</strong> di Telegram</span>
+                    </div>
+                    <div class="d-flex gap-3 mb-2">
+                        <span class="fw-bold" style="color:var(--tdr-gold);min-width:18px">2</span>
+                        <span>Klik tombol <kbd>Start</kbd> atau ketik <code>/start</code></span>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <span class="fw-bold" style="color:var(--tdr-gold);min-width:18px">3</span>
+                        <span>Bot akan membalas dengan <strong>Chat ID</strong> kamu — simpan di <a href="{{ route('profile.edit') }}" style="color:var(--tdr-gold)">Profil</a></span>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <a href="https://t.me/{{ $botUsername }}"
+                       target="_blank"
+                       class="btn fw-semibold"
+                       style="background:#0088cc;color:#fff;border:none;border-radius:10px"
+                       onclick="document.getElementById('telegramSetupModal').querySelector('[data-bs-dismiss]').click()">
+                        <i class="bi bi-telegram me-2"></i>Buka @{{ $botUsername }}
+                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('profile.edit') }}" class="btn btn-outline-light flex-fill" style="border-radius:10px;font-size:.85rem">
+                            <i class="bi bi-person-gear me-1"></i>Atur di Profil
+                        </a>
+                        <button type="button" class="btn flex-fill" data-bs-dismiss="modal"
+                                style="background:rgba(255,255,255,.06);color:var(--tdr-muted);border:1px solid var(--tdr-border);border-radius:10px;font-size:.85rem">
+                            Nanti saja
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+{{-- ─────────────────────────────────────────────────────────────── --}}
+
 <footer class="tdr-footer">
     <div class="container">
         <div class="row g-4">
@@ -544,6 +610,14 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+@if(session('show_telegram_modal'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('telegramSetupModal');
+        if (el) { new bootstrap.Modal(el).show(); }
+    });
+</script>
+@endif
 @stack('scripts')
 </body>
 </html>

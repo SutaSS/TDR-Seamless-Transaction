@@ -26,9 +26,14 @@
                     <i class="bi bi-telegram me-1"></i> Notifikasi otomatis akan dikirim ke Telegram Anda
                     saat status pesanan diperbarui.
                 </div>
+                <a href="{{ route('orders.track', $order->order_number) }}"
+                   class="btn w-100 mt-2 fw-semibold"
+                   style="background:rgba(212,168,67,.15);color:var(--tdr-gold);border:1px solid rgba(212,168,67,.3);border-radius:10px">
+                    <i class="bi bi-map me-2"></i>Lacak Pesanan
+                </a>
                 @endif
 
-                <a href="/" class="btn btn-primary mt-2">Kembali ke Beranda</a>
+                <a href="/" class="btn btn-outline-light btn-sm w-100 mt-2">Kembali ke Beranda</a>
             </div>
         </div>
     </div>

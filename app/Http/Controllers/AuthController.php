@@ -39,6 +39,11 @@ class AuthController extends Controller
 
         Auth::login($user);
 
+        // Tampilkan modal jika telegram belum dihubungkan
+        if (empty($user->telegram_chat_id)) {
+            session()->flash('show_telegram_modal', true);
+        }
+
         return redirect()->intended(route('home'))
             ->with('success', 'Akun berhasil dibuat. Selamat datang!');
     }
@@ -61,6 +66,11 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             $user = Auth::user();
+
+            // Tampilkan modal jika telegram belum dihubungkan
+            if (empty($user->telegram_chat_id)) {
+                session()->flash('show_telegram_modal', true);
+            }
 
             if ($user->role === 'admin') {
                 return redirect()->route('admin.dashboard');

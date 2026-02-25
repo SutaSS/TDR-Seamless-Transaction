@@ -45,11 +45,12 @@ class NotificationService
      */
     private function buildMessage(Order $order, string $event): ?string
     {
-        $customer = $order->customer;
-        $name     = $customer?->name ?? 'Pelanggan';
-        $ordNum   = $order->order_number;
-        $total    = 'Rp ' . number_format((float) $order->total_amount, 0, ',', '.');
-        $date     = Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+        $customer   = $order->customer;
+        $name       = $customer?->name ?? 'Pelanggan';
+        $ordNum     = $order->order_number;
+        $total      = 'Rp ' . number_format((float) $order->total_amount, 0, ',', '.');
+        $date       = Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+        $trackLink  = route('orders.track', $ordNum);
 
         return match ($event) {
             'payment.confirmed' =>
@@ -59,6 +60,7 @@ class NotificationService
                 "Pembayaran untuk pesanan *{$ordNum}* telah kami terima.\n" .
                 "Total: *{$total}*\n\n" .
                 "Pesanan Anda sedang kami proses. Kami akan mengirimkan notifikasi saat barang dikirim.\n\n" .
+                "🔗 [Lacak Pesanan]({$trackLink})\n\n" .
                 "Terima kasih telah berbelanja di store.tdr-hpz.com! 🚀",
 
             'order.processing' =>
@@ -66,6 +68,7 @@ class NotificationService
                 "⚙️ *Pesanan Diproses*\n\n" .
                 "Halo {$name},\n\n" .
                 "Pesanan *{$ordNum}* sedang dalam proses pengemasan.\n\n" .
+                "🔗 [Lacak Pesanan]({$trackLink})\n\n" .
                 "Kami akan segera mengirimkan pesanan Anda. Nantikan informasi pengiriman selanjutnya!",
 
             'order.shipped' =>
@@ -76,6 +79,7 @@ class NotificationService
                 ($order->shipping_tracking_number
                     ? "Nomor Resi: `{$order->shipping_tracking_number}`\n\n"
                     : "\n") .
+                "🔗 [Lacak Pesanan]({$trackLink})\n\n" .
                 "Silakan pantau pengiriman Anda. Terima kasih! 🙏",
 
             'order.delivered' =>
@@ -83,6 +87,7 @@ class NotificationService
                 "🎉 *Pesanan Selesai*\n\n" .
                 "Halo {$name},\n\n" .
                 "Pesanan *{$ordNum}* telah selesai.\n\n" .
+                "🔗 [Riwayat Pesanan]({$trackLink})\n\n" .
                 "Terima kasih telah berbelanja di store.tdr-hpz.com! 🚀",
 
             'order.cancelled' =>
