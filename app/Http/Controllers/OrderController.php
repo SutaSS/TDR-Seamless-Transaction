@@ -18,8 +18,7 @@ class OrderController extends Controller
 
         return view('orders.index', compact('orders'));
     }
-
-    /** GET /orders/{orderNumber} — halaman tracking pesanan */
+    
     public function track(Request $request, string $orderNumber): View
     {
         $order = Order::where('order_number', $orderNumber)

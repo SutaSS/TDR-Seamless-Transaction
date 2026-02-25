@@ -9,10 +9,6 @@ use Illuminate\Support\Carbon;
 
 class NotificationService
 {
-    /**
-     * Fire a Telegram notification for an order event.
-     * Creates a Notification record then dispatches the job.
-     */
     public function notifyOrderStatus(Order $order, string $event, ?string $note = null): void
     {
         $user = $order->customer;
@@ -40,9 +36,7 @@ class NotificationService
         SendTelegramNotification::dispatch($notification->id);
     }
 
-    /**
-     * Build the Telegram message text based on event type.
-     */
+
     private function buildMessage(Order $order, string $event, ?string $note = null): ?string
     {
         $customer   = $order->customer;
@@ -110,14 +104,12 @@ class NotificationService
         };
     }
 
-    /**
-     * Notify affiliate that their commission balance was credited (order completed).
-     */
+
     public function notifyAffiliateBalanceCredited(Order $order): void
     {
         if (! $order->affiliate_id) return;
 
-        $affiliate = $order->affiliate; // User model
+        $affiliate = $order->affiliate; 
         $chatId    = $affiliate?->telegram_chat_id;
         if (! $chatId) return;
 
@@ -150,9 +142,7 @@ class NotificationService
         SendTelegramNotification::dispatch($notification->id);
     }
 
-    /**
-     * Notify an affiliate when their account is approved by admin.
-     */
+
     public function notifyAffiliateApproved(\App\Models\AffiliateProfile $profile): void
     {
         $user   = $profile->user;
@@ -188,12 +178,9 @@ class NotificationService
         SendTelegramNotification::dispatch($notification->id);
     }
 
-    /**
-     * Notify an affiliate when they earn a commission.
-     */
     public function notifyAffiliateCommission(\App\Models\AffiliateCommission $commission): void
     {
-        $affiliate = $commission->affiliate;   // BelongsTo User
+        $affiliate = $commission->affiliate;  
         $chatId    = $affiliate?->telegram_chat_id;
 
         if (! $chatId) {
@@ -214,7 +201,6 @@ class NotificationService
                  . "⏰ Waktu: {$date}\n\n"
                  . "Komisi akan masuk ke saldo setelah pesanan selesai (completed). Keep sharing! 🚀";
 
-        // Simpan log dan kirim via job
         $notification = NotificationLog::create([
             'user_id'         => $affiliate->id,
             'order_id'        => $commission->order_id,
@@ -268,9 +254,7 @@ class NotificationService
         SendTelegramNotification::dispatch($notification->id);
     }
 
-    /**
-     * Notify an affiliate when admin approves or rejects their withdrawal request.
-     */
+  
     public function notifyAffiliateWithdrawalProcessed(
         \App\Models\AffiliateProfile    $profile,
         \App\Models\AffiliateWithdrawal $withdrawal,

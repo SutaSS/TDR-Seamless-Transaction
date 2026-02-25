@@ -20,8 +20,6 @@ class OrderController extends Controller
     public function store(CreateOrderRequest $request): JsonResponse
     {
         $data = $request->validated();
-
-        // Attach affiliate code from cookie if present
         if (! isset($data['affiliate_code'])) {
             $data['affiliate_code'] = $request->cookie('affiliate_ref');
         }

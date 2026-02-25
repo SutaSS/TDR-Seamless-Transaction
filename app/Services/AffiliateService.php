@@ -24,7 +24,6 @@ class AffiliateService
             return null;
         }
 
-        // Use pre-computed commission_amount if it was set during order creation
         $amount = (float) $order->commission_amount > 0
             ? (float) $order->commission_amount
             : round((float) $order->subtotal * ($affiliateProfile->commission_rate / 100), 2);
@@ -38,9 +37,6 @@ class AffiliateService
         ]);
     }
 
-    /**
-     * Mark a commission as earned and credit the affiliate's balance.
-     */
     public function earnCommission(AffiliateCommission $commission): void
     {
         DB::transaction(function () use ($commission) {

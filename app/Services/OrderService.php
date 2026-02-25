@@ -19,12 +19,6 @@ class OrderService
     ) {}
 
     /**
-     * Create a new order, attach items, and obtain a Midtrans Snap token.
-     *
-     * Accepts either:
-     *   - New format:  $data['items'] = [['product_id'=>1,'quantity'=>2,'affiliate_code'=>'X'], ...]
-     *   - Legacy format: $data['product_id'], $data['quantity'], $data['affiliate_code']
-     *
      * @param array $data   Validated payload
      * @param int   $customerId
      */
@@ -32,7 +26,6 @@ class OrderService
     {
         return DB::transaction(function () use ($data, $customerId) {
 
-            // Normalize to items[] array
             if (isset($data['product_id'])) {
                 $rawItems = [[
                     'product_id'     => $data['product_id'],
@@ -43,11 +36,10 @@ class OrderService
                 $rawItems = $data['items'] ?? [];
             }
 
-            // Resolve products & compute totals
             $resolvedItems = [];
             $subtotal      = 0;
             $commTotal     = 0;
-            $primaryAffId  = null;  // orders.affiliate_id = first affiliate found
+            $primaryAffId  = null;
             $midtransItems = [];
 
             foreach ($rawItems as $raw) {
@@ -109,7 +101,6 @@ class OrderService
                 'notes'            => $data['notes'] ?? null,
             ]);
 
-            // ── Create order items + decrement stock ────────────────────
             foreach ($resolvedItems as $ri) {
                 OrderItem::create([
                     'order_id'          => $order->id,
@@ -127,7 +118,6 @@ class OrderService
                 }
             }
 
-            // Add shipping to Midtrans items if applicable
             if ($shippingCost > 0) {
                 $midtransItems[] = [
                     'id'       => 'SHIPPING',
@@ -150,7 +140,7 @@ class OrderService
                 'item_details' => $midtransItems,
                 'callbacks' => [
                     'finish'   => url('/checkout/success?order_number=' . $order->order_number),
-                    'unfinish' => url('/checkout'),   // user left without paying → back to checkout
+                    'unfinish' => url('/checkout'),  
                     'error'    => url('/checkout/failed'),
                 ],
             ]);
@@ -170,7 +160,7 @@ class OrderService
     public function checkAndVerifyPayment(Order $order): bool
     {
         if ($order->payment_verified_at) {
-            return true; // Already verified
+            return true; 
         }
 
         $result = $this->midtrans->getTransactionStatus($order->order_number);
@@ -201,14 +191,12 @@ class OrderService
         $processed  = false;
 
         DB::transaction(function () use ($order, $transactionId, &$commission, &$processed) {
-            // Lock row to prevent race condition (webhook + success page hitting simultaneously)
             $locked = Order::where('id', $order->id)
                 ->whereNull('payment_verified_at')
                 ->lockForUpdate()
                 ->first();
 
             if (! $locked) {
-                // Already processed by another request
                 return;
             }
 
@@ -224,7 +212,6 @@ class OrderService
                 'description'  => 'Pembayaran telah diverifikasi via Midtrans.',
             ]);
 
-            // Earn affiliate commission inside transaction so balance is atomic
             if ($locked->affiliate_id) {
                 $commission = $this->affiliate->recordCommission($locked);
                 if ($commission) {
@@ -234,18 +221,14 @@ class OrderService
 
             $processed = true;
         });
-
-        // Only send notifications if this request actually processed the payment
         if (! $processed) {
             return;
         }
 
         $freshOrder = $order->fresh();
 
-        // Notify customer
         $this->notification->notifyOrderStatus($freshOrder, 'payment.confirmed');
 
-        // Notify affiliate about earned commission
         if ($commission) {
             $this->notification->notifyAffiliateCommission($commission);
         }

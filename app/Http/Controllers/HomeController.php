@@ -41,7 +41,6 @@ class HomeController extends Controller
     {
         $product = Product::active()->where('slug', $slug)->firstOrFail();
 
-        // Resolve affiliate from ?affiliate_code=CODE or ?ref=CODE
         $affCode = $request->query('affiliate_code') ?? $request->query('ref');
         $affiliate = null;
 

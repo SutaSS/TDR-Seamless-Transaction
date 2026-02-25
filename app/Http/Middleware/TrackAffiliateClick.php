@@ -21,7 +21,6 @@ class TrackAffiliateClick
                 ->first();
 
             if ($profile) {
-                // Catat klik secara async (non-blocking)
                 ProcessAffiliateClick::dispatch(
                     $profile->user_id,
                     $request->ip(),
@@ -29,7 +28,6 @@ class TrackAffiliateClick
                     $request->headers->get('referer') ?? ''
                 );
 
-                // Simpan ref_code di cookie (30 hari)
                 $response = $next($request);
                 return $response->withCookie(
                     cookie('ref_code', $refCode, 60 * 24 * 30)

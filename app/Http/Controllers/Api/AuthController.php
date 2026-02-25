@@ -19,7 +19,6 @@ class AuthController extends Controller
     {
         $data = $request->validated();
 
-        // Auto-assign role based on email domain
         if (empty($data['role'])) {
             $data['role'] = str_ends_with($data['email'], '@tdr.com') ? 'admin' : 'customer';
         }

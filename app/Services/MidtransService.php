@@ -32,10 +32,6 @@ class MidtransService
         return hash_equals($expected, $signature);
     }
 
-    /**
-     * Get transaction status from Midtrans API.
-     * Returns the status string: settlement, pending, cancel, expire, etc.
-     */
     public function getTransactionStatus(string $orderId): ?array
     {
         $baseUrl = $this->isProduction
@@ -60,10 +56,8 @@ class MidtransService
     }
 
     /**
-     * Create a Midtrans Snap payment token and return the redirect_url.
-     *
-     * @param  array  $params  Midtrans transaction params
-     * @return string  Redirect URL to Midtrans payment page
+     * @param  array  $params  
+     * @return string  
      * @throws \RuntimeException
      */
     public function createSnapToken(array $params): string

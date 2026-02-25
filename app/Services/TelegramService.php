@@ -17,8 +17,6 @@ class TelegramService
     }
 
     /**
-     * Send a Markdown message to a Telegram chat.
-     *
      * @param  string  $chatId  
      * @param  string  $message  
      * @return bool
