@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
@@ -20,6 +21,9 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
 
 // Shop / Product Catalog
 Route::get('/shop', [HomeController::class, 'shop'])->name('shop');
+
+// Product detail & share page
+Route::get('/products/{slug}', [HomeController::class, 'showProduct'])->name('product.show');
 
 //Auth (Register & Login) — hanya untuk guest
 Route::middleware('guest')->group(function () {
@@ -55,6 +59,15 @@ Route::prefix('checkout')->name('checkout.')->middleware('auth')->group(function
     Route::post('/',       [CheckoutController::class, 'process'])->name('process');
     Route::get('/success', [CheckoutController::class, 'success'])->name('success');
     Route::get('/failed',  [CheckoutController::class, 'failed'])->name('failed');
+});
+
+// Cart — harus login
+Route::prefix('cart')->name('cart.')->middleware('auth')->group(function () {
+    Route::get('/',              [CartController::class, 'index'])->name('index');
+    Route::post('/add',          [CartController::class, 'add'])->name('add');
+    Route::patch('/{productId}', [CartController::class, 'update'])->name('update');
+    Route::delete('/clear',      [CartController::class, 'clear'])->name('clear');
+    Route::delete('/{productId}',[CartController::class, 'remove'])->name('remove');
 });
 
 // Affiliate

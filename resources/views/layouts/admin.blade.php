@@ -212,15 +212,24 @@
         }
         .form-control::placeholder { color: var(--adm-muted); }
         .form-label { color: var(--adm-text); font-weight: 600; font-size: 0.85rem; }
+        .form-select option,
+        .form-select optgroup {
+            background: #111118;
+            color: var(--adm-text);
+        }
+        .form-select option:checked {
+            background: var(--adm-red);
+            color: #fff;
+        }
 
         /* ── Tables ──────────────────────────────────────────────── */
-        .table { color: var(--adm-text); --bs-table-bg: transparent; }
+        .table { color: var(--adm-text) !important; --bs-table-bg: transparent; --bs-table-color: var(--adm-text); }
         .table thead th {
             font-size: 0.7rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.6px;
-            color: var(--adm-muted);
+            color: var(--adm-muted) !important;
             padding: 12px 16px;
             border: none;
             border-bottom: 1px solid var(--adm-border);
@@ -230,12 +239,17 @@
             border-bottom: 1px solid var(--adm-border);
             vertical-align: middle;
             font-size: 0.875rem;
+            color: var(--adm-text) !important;
+        }
+        .table tfoot td, .table tfoot th {
+            color: var(--adm-text) !important;
         }
         .table-hover tbody tr:hover {
             background: rgba(255,255,255,0.025);
             --bs-table-hover-bg: rgba(255,255,255,0.025);
+            --bs-table-hover-color: var(--adm-text);
         }
-        .table-light { --bs-table-bg: rgba(255,255,255,0.025); }
+        .table-light { --bs-table-bg: rgba(255,255,255,0.025); --bs-table-color: var(--adm-text); }
 
         /* ── Buttons ─────────────────────────────────────────────── */
         .btn-primary {
@@ -323,6 +337,23 @@
         a:hover { color: var(--adm-red-h); }
         code { color: var(--adm-gold); background: rgba(212,168,67,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
         hr { border-color: var(--adm-border); opacity: 1; }
+
+        /* ── Force light text everywhere (Bootstrap dark override) ── */
+        body, h1, h2, h3, h4, h5, h6, p, span, div, label, td, th,
+        li, strong, b, em, small, .fw-bold, .fw-semibold,
+        .card-body, .card-title, .card-text,
+        .list-group-item, .modal-body, .modal-title,
+        .dropdown-item, .breadcrumb-item,
+        .accordion-button, .offcanvas-body,
+        tfoot td, tfoot th, thead td, thead th {
+            color: var(--adm-text);
+        }
+        .text-muted, .card-text.text-muted, small.text-muted { color: var(--adm-muted) !important; }
+        .badge { color: inherit; }
+        .btn { color: #fff; }
+        .btn-outline-secondary { color: var(--adm-muted); }
+        .btn-outline-secondary:hover { color: var(--adm-text); }
+        .btn-warning, .btn-warning:hover { color: #0b0b0f; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--adm-bg); }

@@ -18,12 +18,15 @@ class OrderItem extends Model
         'product_price',
         'quantity',
         'subtotal',
+        'affiliate_code',
+        'commission_amount',
     ];
 
     protected $casts = [
-        'product_price' => 'decimal:2',
-        'subtotal'      => 'decimal:2',
-        'quantity'      => 'integer',
+        'product_price'     => 'decimal:2',
+        'subtotal'          => 'decimal:2',
+        'quantity'          => 'integer',
+        'commission_amount' => 'decimal:2',
     ];
 
     // ──────────────────────────── Relations ────────────────────────────

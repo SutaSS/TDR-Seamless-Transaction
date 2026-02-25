@@ -62,7 +62,7 @@
                            class="form-control @error('email') is-invalid @enderror"
                            placeholder="email@contoh.com" required>
                     <div class="form-text">
-                        Email <code>@tdr.com</code> akan langsung menjadi <strong>admin</strong>.
+                        Email <code>@tdr-hpz.com</code> akan langsung menjadi <strong>admin</strong>.
                         Email lain akan menjadi <strong>customer</strong>.
                     </div>
                     @error('email')

@@ -18,6 +18,7 @@ class Order extends Model
         'affiliate_id',
         'subtotal',
         'commission_amount',
+        'shipping_cost',
         'total_amount',
         'status',
         'payment_method',
@@ -37,6 +38,7 @@ class Order extends Model
     protected $casts = [
         'subtotal'            => 'decimal:2',
         'commission_amount'   => 'decimal:2',
+        'shipping_cost'       => 'decimal:2',
         'total_amount'        => 'decimal:2',
         'payment_verified_at' => 'datetime',
         'shipped_at'          => 'datetime',

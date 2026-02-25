@@ -48,6 +48,7 @@
         @foreach($products as $product)
         <div class="col-sm-6 col-md-4 col-lg-3">
             <div class="card h-100 product-card">
+                <a href="{{ route('product.show', $product->slug) }}" style="text-decoration:none;display:block">
                 @if($product->thumbnail_url ?? false)
                     <img src="{{ $product->thumbnail_url }}" class="card-img-top" style="height:180px;object-fit:cover;border-radius:12px 12px 0 0" alt="{{ $product->name }}">
                 @else
@@ -56,8 +57,11 @@
                         <small class="text-muted mt-1">{{ $product->sku ?? '' }}</small>
                     </div>
                 @endif
+                </a>
                 <div class="card-body d-flex flex-column">
-                    <h6 class="card-title fw-bold mb-1">{{ $product->name }}</h6>
+                    <h6 class="card-title fw-bold mb-1">
+                        <a href="{{ route('product.show', $product->slug) }}" style="color:var(--tdr-text);text-decoration:none">{{ $product->name }}</a>
+                    </h6>
                     @if($product->description)
                         <p class="card-text text-muted small flex-grow-1">{{ \Illuminate\Support\Str::limit($product->description, 80) }}</p>
                     @else
@@ -75,9 +79,21 @@
                 <div class="card-footer border-0 pb-3">
                     @if(($product->stock ?? 1) > 0)
                         @auth
-                            <a href="{{ route('checkout.form') }}?product_id={{ $product->id }}" class="btn btn-primary w-100 fw-semibold">
-                                <i class="bi bi-cart-plus me-1"></i> Beli Sekarang
+                        <form method="POST" action="{{ route('cart.add') }}" class="d-flex gap-2">
+                            @csrf
+                            <input type="hidden" name="product_id" value="{{ $product->id }}">
+                            <input type="hidden" name="quantity" value="1">
+                            @if(request()->cookie('affiliate_code'))
+                                <input type="hidden" name="affiliate_code" value="{{ request()->cookie('affiliate_code') }}">
+                            @endif
+                            <button type="submit" class="btn btn-primary flex-grow-1 fw-semibold" style="font-size:.8rem">
+                                <i class="bi bi-cart-plus me-1"></i>Keranjang
+                            </button>
+                            <a href="{{ route('product.show', $product->slug) }}"
+                               class="btn btn-outline-secondary" style="font-size:.8rem" title="Lihat Detail">
+                                <i class="bi bi-eye"></i>
                             </a>
+                        </form>
                         @else
                             <a href="{{ route('login') }}" class="btn btn-primary w-100 fw-semibold">
                                 <i class="bi bi-box-arrow-in-right me-1"></i> Login untuk Beli

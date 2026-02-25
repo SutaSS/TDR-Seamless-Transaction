@@ -29,7 +29,7 @@ class AffiliateController extends Controller
         return redirect()->away(url('/'));
     }
 
-    /** GET /affiliate/register */
+    // GET /affiliate/register
     public function showRegisterForm(): View|RedirectResponse
     {
         if (! auth()->check()) {
@@ -45,7 +45,7 @@ class AffiliateController extends Controller
         return view('affiliate.register');
     }
 
-    /** POST /affiliate/register */
+    // POST /affiliate/register
     public function register(Request $request): RedirectResponse
     {
         $user = $request->user();
@@ -84,7 +84,7 @@ class AffiliateController extends Controller
             ->with('success', 'Pendaftaran affiliate berhasil! Tunggu persetujuan admin.');
     }
 
-    /** GET /affiliate/dashboard */
+    // GET /affiliate/dashboard
     public function dashboard(Request $request): View|RedirectResponse
     {
         $user      = $request->user();
@@ -111,7 +111,7 @@ class AffiliateController extends Controller
         return view('affiliate.dashboard', compact('affiliate', 'stats', 'chartData', 'referralLink', 'recentOrders', 'pendingWithdrawal'));
     }
 
-    /** POST /affiliate/withdraw */
+    // POST /affiliate/withdraw
     public function requestWithdrawal(Request $request): RedirectResponse
     {
         $user      = $request->user();

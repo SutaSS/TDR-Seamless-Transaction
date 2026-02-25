@@ -14,45 +14,72 @@ use Illuminate\View\View;
 class CheckoutController extends Controller
 {
     /** Flat shipping cost options. */
-    private array $couriers = [
-        'jne_reg'  => ['label' => 'JNE Reguler (2–3 hari)',  'cost' => 15_000],
-        'jne_yes'  => ['label' => 'JNE YES (1 hari)',         'cost' => 25_000],
-        'jnt_reg'  => ['label' => 'J&T Reguler (2–3 hari)',  'cost' => 13_000],
-        'sicepat'  => ['label' => 'SiCepat Halu (1–2 hari)', 'cost' => 14_000],
-        'pos_biasa'=> ['label' => 'Pos Indonesia Biasa',      'cost' => 10_000],
+    public array $couriers = [
+        'jne_reg'   => ['label' => 'JNE Reguler (2–3 hari)',  'cost' => 15_000],
+        'jne_yes'   => ['label' => 'JNE YES (1 hari)',         'cost' => 25_000],
+        'jnt_reg'   => ['label' => 'J&T Reguler (2–3 hari)',  'cost' => 13_000],
+        'sicepat'   => ['label' => 'SiCepat Halu (1–2 hari)', 'cost' => 14_000],
+        'pos_biasa' => ['label' => 'Pos Indonesia Biasa',      'cost' => 10_000],
     ];
 
     public function __construct(protected OrderService $orderService) {}
 
-    /** GET /checkout */
+    /** GET /checkout — reads from session cart */
     public function showForm(Request $request): View|RedirectResponse
     {
-        $productId = $request->query('product_id');
+        $cart = session('cart', []);
 
-        if (! $productId) {
-            return redirect()->route('shop')->with('info', 'Pilih produk terlebih dahulu.');
+        // Support legacy single-product URL: ?product_id=X&qty=1
+        if (empty($cart) && $request->query('product_id')) {
+            $product = Product::active()->find($request->query('product_id'));
+            if ($product) {
+                $affCode = $request->query('affiliate_code')
+                    ?? $request->query('ref')
+                    ?? Cookie::get('affiliate_ref');
+
+                if ($affCode) {
+                    $valid = AffiliateProfile::where('referral_code', $affCode)
+                        ->where('status', 'active')->exists();
+                    if (! $valid) $affCode = null;
+                }
+
+                $cart[(string) $product->id] = [
+                    'product_id'     => $product->id,
+                    'product_name'   => $product->name,
+                    'product_price'  => (float) $product->price,
+                    'product_slug'   => $product->slug,
+                    'thumbnail_url'  => $product->thumbnail_url,
+                    'stock'          => $product->stock,
+                    'quantity'       => max(1, (int) $request->query('qty', 1)),
+                    'affiliate_code' => $affCode,
+                ];
+
+                session(['cart' => $cart]);
+            }
         }
 
-        $product   = Product::active()->findOrFail($productId);
-        $user      = $request->user();
-        $qty       = max(1, (int) $request->query('qty', 1));
-        $affiliate = null;
-
-        // Load affiliate from referral cookie
-        $refCode = Cookie::get('affiliate_ref');
-        if ($refCode) {
-            $affiliate = AffiliateProfile::with('user')
-                ->where('referral_code', $refCode)
-                ->where('status', 'active')
-                ->first();
+        if (empty($cart)) {
+            return redirect()->route('shop')->with('info', 'Tambahkan produk ke keranjang terlebih dahulu.');
         }
+
+        // Resolve affiliate profile per item for display
+        $affiliates = [];
+        foreach ($cart as $key => $item) {
+            if (! empty($item['affiliate_code'])) {
+                $affiliates[$key] = AffiliateProfile::with('user')
+                    ->where('referral_code', $item['affiliate_code'])
+                    ->where('status', 'active')
+                    ->first();
+            }
+        }
+
+        $user = $request->user();
 
         return view('checkout.index', [
-            'product'  => $product,
-            'user'     => $user,
-            'qty'      => $qty,
-            'couriers' => $this->couriers,
-            'affiliate'=> $affiliate,
+            'cart'      => $cart,
+            'affiliates'=> $affiliates,
+            'user'      => $user,
+            'couriers'  => $this->couriers,
         ]);
     }
 
@@ -60,21 +87,24 @@ class CheckoutController extends Controller
     public function process(Request $request): RedirectResponse
     {
         $user = $request->user();
+        $cart = session('cart', []);
+
+        if (empty($cart)) {
+            return redirect()->route('shop')->with('info', 'Keranjang belanja kosong.');
+        }
 
         $data = $request->validate([
-            'product_id'       => 'required|integer|exists:products,id',
-            'qty'              => 'required|integer|min:1',
-            'shipping_courier' => 'required|string|in:' . implode(',', array_keys($this->couriers)),
-            'shipping_address' => 'required|string',
-            'customer_name'    => 'required|string|max:255',
-            'customer_phone'   => 'required|string|max:30',
-            'shipping_city'    => 'required|string|max:100',
-            'shipping_province'=> 'required|string|max:100',
+            'shipping_courier'     => 'required|string|in:' . implode(',', array_keys($this->couriers)),
+            'shipping_address'     => 'required|string',
+            'customer_name'        => 'required|string|max:255',
+            'customer_phone'       => 'required|string|max:30',
+            'customer_email'       => 'nullable|email|max:255',
+            'shipping_city'        => 'required|string|max:100',
+            'shipping_province'    => 'required|string|max:100',
             'shipping_postal_code' => 'required|string|max:10',
-            'notes'            => 'nullable|string|max:1000',
+            'notes'                => 'nullable|string|max:1000',
         ]);
 
-        // Combine shipping address fields into a single string
         $combinedAddress = implode(', ', array_filter([
             $data['customer_name'],
             $data['customer_phone'],
@@ -84,14 +114,26 @@ class CheckoutController extends Controller
             $data['shipping_postal_code'],
         ]));
 
+        $courierInfo  = $this->couriers[$data['shipping_courier']];
+        $shippingCost = $courierInfo['cost'];
+
+        // Build items array from cart
+        $items = [];
+        foreach ($cart as $item) {
+            $items[] = [
+                'product_id'     => $item['product_id'],
+                'quantity'       => $item['quantity'],
+                'affiliate_code' => $item['affiliate_code'] ?? null,
+            ];
+        }
+
         $orderData = [
-            'product_id'       => $data['product_id'],
-            'quantity'         => $data['qty'],
+            'items'            => $items,
             'shipping_courier' => $data['shipping_courier'],
+            'shipping_cost'    => $shippingCost,
             'shipping_address' => $combinedAddress,
             'notes'            => $data['notes'] ?? null,
             'payment_method'   => 'midtrans',
-            'affiliate_code'   => Cookie::get('affiliate_ref'),
         ];
 
         try {
@@ -100,7 +142,8 @@ class CheckoutController extends Controller
             return back()->withErrors(['general' => 'Gagal membuat pesanan: ' . $e->getMessage()]);
         }
 
-        // Clear affiliate cookie after order
+        // Clear cart and affiliate cookie after successful order
+        session()->forget('cart');
         Cookie::expire('affiliate_ref');
 
         return redirect()->away($order->midtrans_snap_token);
@@ -111,12 +154,12 @@ class CheckoutController extends Controller
     {
         $order = null;
 
-        // support both ?order_number=TDR-xxx (internal) and ?order_id=TDR-xxx (Midtrans redirect)
         $orderNumber = $request->query('order_number') ?? $request->query('order_id');
 
         if ($orderNumber) {
             $order = Order::where('order_number', $orderNumber)
                 ->where('customer_id', $request->user()->id)
+                ->with('items')
                 ->first();
         }
 
@@ -137,3 +180,4 @@ class CheckoutController extends Controller
         return view('checkout.failed');
     }
 }
+

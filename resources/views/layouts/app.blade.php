@@ -443,6 +443,20 @@
             </ul>
             <ul class="navbar-nav align-items-center gap-2">
                 @auth
+                    @if(auth()->user()->role !== 'admin')
+                    <li class="nav-item">
+                        <a href="{{ route('cart.index') }}" class="nav-link position-relative" title="Keranjang">
+                            <i class="bi bi-cart3"></i>
+                            @php $__cartCount = count(session('cart', [])); @endphp
+                            @if($__cartCount > 0)
+                            <span class="badge bg-danger position-absolute"
+                                  style="top:6px;right:2px;font-size:.55rem;padding:2px 4px;border-radius:10px;min-width:16px;line-height:1">
+                                {{ $__cartCount }}
+                            </span>
+                            @endif
+                        </a>
+                    </li>
+                    @endif
                     <li class="nav-item">
                         <a href="{{ route('profile.edit') }}" class="user-info">
                             <i class="bi bi-person-circle"></i>

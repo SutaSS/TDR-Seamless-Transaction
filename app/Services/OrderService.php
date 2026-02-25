@@ -21,43 +21,87 @@ class OrderService
     /**
      * Create a new order, attach items, and obtain a Midtrans Snap token.
      *
-     * @param array $data   Validated payload from CreateOrderRequest
+     * Accepts either:
+     *   - New format:  $data['items'] = [['product_id'=>1,'quantity'=>2,'affiliate_code'=>'X'], ...]
+     *   - Legacy format: $data['product_id'], $data['quantity'], $data['affiliate_code']
+     *
+     * @param array $data   Validated payload
      * @param int   $customerId
      */
     public function createOrder(array $data, int $customerId): Order
     {
         return DB::transaction(function () use ($data, $customerId) {
-            $product  = Product::findOrFail($data['product_id']);
-            $qty      = (int) ($data['quantity'] ?? 1);
-            $subtotal = $product->price * $qty;
 
-            // Resolve affiliate if referral cookie is present
-            $affiliateId      = null;
-            $commissionRate   = 0;
-            $commissionAmount = 0;
-
-            if (! empty($data['affiliate_code'])) {
-                $affiliateProfile = AffiliateProfile::where('referral_code', $data['affiliate_code'])
-                    ->where('status', 'active')
-                    ->first();
-
-                if ($affiliateProfile) {
-                    $affiliateId      = $affiliateProfile->user_id;
-                    $commissionRate   = $affiliateProfile->commission_rate;
-                    $commissionAmount = round($subtotal * ($commissionRate / 100), 2);
-                }
+            // ── Normalize to items[] array ──────────────────────────────
+            if (isset($data['product_id'])) {
+                $rawItems = [[
+                    'product_id'     => $data['product_id'],
+                    'quantity'       => $data['quantity'] ?? 1,
+                    'affiliate_code' => $data['affiliate_code'] ?? null,
+                ]];
+            } else {
+                $rawItems = $data['items'] ?? [];
             }
 
-            $orderNumber = 'TDR-' . strtoupper(Str::random(8));
+            // ── Resolve products & compute totals ───────────────────────
+            $resolvedItems = [];
+            $subtotal      = 0;
+            $commTotal     = 0;
+            $primaryAffId  = null;  // orders.affiliate_id = first affiliate found
+            $midtransItems = [];
+
+            foreach ($rawItems as $raw) {
+                $product   = Product::findOrFail($raw['product_id']);
+                $qty       = max(1, (int) ($raw['quantity'] ?? 1));
+                $itemTotal = round((float) $product->price * $qty, 2);
+                $subtotal += $itemTotal;
+
+                // Resolve per-item affiliate
+                $affId       = null;
+                $commRate    = 0;
+                $commAmount  = 0;
+                $affCode     = $raw['affiliate_code'] ?? null;
+
+                if (! empty($affCode)) {
+                    $affProfile = AffiliateProfile::where('referral_code', $affCode)
+                        ->where('status', 'active')
+                        ->first();
+
+                    if ($affProfile) {
+                        $affId      = $affProfile->user_id;
+                        $commRate   = $affProfile->commission_rate;
+                        $commAmount = round($itemTotal * ($commRate / 100), 2);
+                        $commTotal += $commAmount;
+
+                        if (! $primaryAffId) {
+                            $primaryAffId = $affId;
+                        }
+                    }
+                }
+
+                $resolvedItems[] = compact('product', 'qty', 'itemTotal', 'affId', 'affCode', 'commAmount');
+
+                $midtransItems[] = [
+                    'id'       => $product->id,
+                    'price'    => (int) $product->price,
+                    'quantity' => $qty,
+                    'name'     => mb_substr($product->name, 0, 50),
+                ];
+            }
+
+            $shippingCost = (float) ($data['shipping_cost'] ?? 0);
+            $totalAmount  = $subtotal + $shippingCost;
+            $orderNumber  = 'TDR-' . strtoupper(Str::random(8));
 
             /** @var Order $order */
             $order = Order::create([
                 'order_number'     => $orderNumber,
                 'customer_id'      => $customerId,
-                'affiliate_id'     => $affiliateId,
+                'affiliate_id'     => $primaryAffId,
                 'subtotal'         => $subtotal,
-                'commission_amount'=> $commissionAmount,
-                'total_amount'     => $subtotal,
+                'commission_amount'=> $commTotal,
+                'shipping_cost'    => $shippingCost,
+                'total_amount'     => $totalAmount,
                 'status'           => 'pending',
                 'payment_method'   => $data['payment_method'] ?? null,
                 'shipping_address' => $data['shipping_address'],
@@ -65,36 +109,45 @@ class OrderService
                 'notes'            => $data['notes'] ?? null,
             ]);
 
-            OrderItem::create([
-                'order_id'      => $order->id,
-                'product_id'    => $product->id,
-                'product_name'  => $product->name,
-                'product_price' => $product->price,
-                'quantity'      => $qty,
-                'subtotal'      => $subtotal,
-            ]);
+            // ── Create order items + decrement stock ────────────────────
+            foreach ($resolvedItems as $ri) {
+                OrderItem::create([
+                    'order_id'          => $order->id,
+                    'product_id'        => $ri['product']->id,
+                    'product_name'      => $ri['product']->name,
+                    'product_price'     => $ri['product']->price,
+                    'quantity'          => $ri['qty'],
+                    'subtotal'          => $ri['itemTotal'],
+                    'affiliate_code'    => $ri['affCode'],
+                    'commission_amount' => $ri['commAmount'],
+                ]);
 
-            // Decrement product stock
-            if ($product->stock !== null) {
-                $product->decrement('stock', $qty);
+                if ($ri['product']->stock !== null) {
+                    $ri['product']->decrement('stock', $ri['qty']);
+                }
             }
 
-            // Build Midtrans Snap token
+            // Add shipping to Midtrans items if applicable
+            if ($shippingCost > 0) {
+                $midtransItems[] = [
+                    'id'       => 'SHIPPING',
+                    'price'    => (int) $shippingCost,
+                    'quantity' => 1,
+                    'name'     => 'Ongkos Kirim (' . $data['shipping_courier'] . ')',
+                ];
+            }
+
+            // ── Build Midtrans Snap token ───────────────────────────────
             $snapUrl = $this->midtrans->createSnapToken([
                 'transaction_details' => [
                     'order_id'     => $order->order_number,
-                    'gross_amount' => (int) $subtotal,
+                    'gross_amount' => (int) $totalAmount,
                 ],
                 'customer_details' => [
                     'first_name' => $order->customer?->name ?? 'Customer',
                     'email'      => $order->customer?->email ?? '',
                 ],
-                'item_details' => [[
-                    'id'       => $product->id,
-                    'price'    => (int) $product->price,
-                    'quantity' => $qty,
-                    'name'     => mb_substr($product->name, 0, 50),
-                ]],
+                'item_details' => $midtransItems,
                 'callbacks' => [
                     'finish'   => url('/checkout/success?order_number=' . $order->order_number),
                     'unfinish' => url('/checkout/failed'),

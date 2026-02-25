@@ -11,13 +11,13 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    /** GET /register */
+    // GET /register 
     public function showRegisterForm(): View
     {
         return view('auth.register');
     }
 
-    /** POST /register */
+    // POST /register 
     public function register(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -39,7 +39,6 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        // Arahkan ke halaman setup Telegram jika belum punya chat_id
         if (empty($user->telegram_chat_id)) {
             return redirect()->route('telegram.setup')
                 ->with('success', 'Akun berhasil dibuat. Selamat datang!');
@@ -49,13 +48,13 @@ class AuthController extends Controller
             ->with('success', 'Akun berhasil dibuat. Selamat datang!');
     }
 
-    /** GET /login */
+    // GET /login
     public function showLoginForm(): View
     {
         return view('auth.login');
     }
 
-    /** POST /login */
+    // POST /login
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
@@ -76,7 +75,6 @@ class AuthController extends Controller
                 return redirect()->route('affiliate.dashboard');
             }
 
-            // Customer: arahkan ke setup Telegram jika belum terhubung
             if (empty($user->telegram_chat_id)) {
                 return redirect()->route('telegram.setup');
             }
@@ -89,7 +87,7 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    /** POST /logout */
+    // POST /logout 
     public function logout(Request $request): RedirectResponse
     {
         Auth::logout();

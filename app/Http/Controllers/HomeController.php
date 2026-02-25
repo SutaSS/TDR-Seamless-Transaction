@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AffiliateProfile;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,5 +33,31 @@ class HomeController extends Controller
             ->paginate(12);
 
         return view('shop', compact('products', 'search'));
+    }
+
+    /** GET /products/{slug} — detail produk & share link */
+    public function showProduct(Request $request, string $slug): View
+    {
+        $product = Product::active()->where('slug', $slug)->firstOrFail();
+
+        // Resolve affiliate from ?affiliate_code=CODE or ?ref=CODE
+        $affCode = $request->query('affiliate_code') ?? $request->query('ref');
+        $affiliate = null;
+
+        if ($affCode) {
+            $affiliate = AffiliateProfile::with('user')
+                ->where('referral_code', $affCode)
+                ->where('status', 'active')
+                ->first();
+            // Store in cookie for existing referral flow
+            if ($affiliate) {
+                cookie()->queue('affiliate_ref', $affCode, 60 * 24 * 30);
+            }
+        }
+
+        // Share URL for this product
+        $shareUrl = url('/products/' . $product->slug);
+
+        return view('products.show', compact('product', 'affiliate', 'affCode', 'shareUrl'));
     }
 }

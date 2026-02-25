@@ -140,12 +140,13 @@
                             <i class="bi bi-info-circle me-1"></i> Saldo belum mencukupi
                         </span>
                     @else
+                        @php $balanceFmt = number_format($stats['balance'], 0, ',', '.'); @endphp
                         <form method="POST" action="{{ route('affiliate.withdraw') }}"
-                              onsubmit="return confirm('Cairkan semua saldo Rp {{ number_format($stats[\'balance\'], 0, \',\', \'.\') }} ke {{ $affiliate->bank_name }} ({{ $affiliate->bank_account_number }})?')">
+                              onsubmit="return confirm('Cairkan semua saldo Rp {{ $balanceFmt }} ke {{ $affiliate->bank_name }} ({{ $affiliate->bank_account_number }})?')">
                             @csrf
                             <button type="submit" class="btn fw-semibold px-4"
                                     style="background:var(--tdr-gold);color:#0b0b0f;border-radius:8px">
-                                <i class="bi bi-cash-coin me-1"></i> Cairkan Rp {{ number_format($stats['balance'], 0, ',', '.') }}
+                                <i class="bi bi-cash-coin me-1"></i> Cairkan Rp {{ $balanceFmt }}
                             </button>
                         </form>
                     @endif
