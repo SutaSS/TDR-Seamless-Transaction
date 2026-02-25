@@ -40,6 +40,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
   // auth & info
   Route::get('/user', [AuthController::class, 'user']);
   Route::put('/user/profile', [AuthController::class, 'updateProfile']);
+  Route::put('/user/password', [AuthController::class, 'updatePassword']);
   Route::post('/user/link-telegram', [AuthController::class, 'linkTelegram']);
   Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -51,8 +52,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
   // order
   Route::post('/orders', [OrderController::class, 'store']);
 
+  // affiliate registration (any authenticated user can apply)
+  Route::post('/affiliate/register', [AffiliateController::class, 'register']);
 
-  // affiliate routes
+  // affiliate routes (only active affiliates)
   Route::middleware('affiliate.active')->prefix('affiliate')->group(function () {
     Route::get('/dashboard', [AffiliateController::class, 'dashboard']);
     Route::get('/profile', [AffiliateController::class, 'profile']);
