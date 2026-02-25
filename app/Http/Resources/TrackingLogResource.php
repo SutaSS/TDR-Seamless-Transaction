@@ -7,13 +7,14 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class TrackingLogResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id'           => $this->id,
+            'order_id'     => $this->order_id,
+            'status_title' => $this->status_title,
+            'description'  => $this->description,
+            'created_at'   => $this->created_at?->toISOString(),
+        ];
     }
 }
