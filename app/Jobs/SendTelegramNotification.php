@@ -37,10 +37,10 @@ class SendTelegramNotification implements ShouldQueue
             return;
         }
 
-        // Resolve chat_id dari user terkait
-        $chatId = null;
+        // Resolve chat_id: use stored recipient first, fall back to user's current telegram_chat_id
+        $chatId = $notification->recipient;
 
-        if ($notification->user_id) {
+        if (empty($chatId) && $notification->user_id) {
             $chatId = $notification->user?->telegram_chat_id;
         }
 

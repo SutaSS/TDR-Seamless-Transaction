@@ -14,10 +14,9 @@ class OrderObserver
      */
     public function updated(Order $order): void
     {
-        // payment_verified_at berubah dari null → terisi → berarti baru dibayar
-        if ($order->wasChanged('payment_verified_at') && $order->payment_verified_at !== null) {
-            $this->notif->notifyOrderStatus($order, 'payment.confirmed');
-        }
+        // NOTE: payment.confirmed is sent explicitly in OrderService::verifyPayment()
+        // to ensure it only fires after the DB transaction commits.
+        // Do NOT send it here to avoid double notifications.
 
         // status berubah → kirim notifikasi event yang sesuai
         if ($order->wasChanged('status')) {
