@@ -8,7 +8,6 @@ use App\Models\Product;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cookie;
 use Illuminate\View\View;
 
 class CheckoutController extends Controller
@@ -33,9 +32,8 @@ class CheckoutController extends Controller
         if (empty($cart) && $request->query('product_id')) {
             $product = Product::active()->find($request->query('product_id'));
             if ($product) {
-                $affCode = $request->query('affiliate_code')
-                    ?? $request->query('ref')
-                    ?? Cookie::get('affiliate_ref');
+                // Affiliate code only from explicit URL param — no cookie fallback.
+                $affCode = $request->query('affiliate_code') ?? $request->query('ref');
 
                 if ($affCode) {
                     $valid = AffiliateProfile::where('referral_code', $affCode)
@@ -181,9 +179,8 @@ class CheckoutController extends Controller
                 ]);
         }
 
-        // Payment confirmed — now safe to clear cart and affiliate cookie
+        // Payment confirmed — clear cart
         session()->forget('cart');
-        Cookie::expire('affiliate_ref');
 
         return view('checkout.success', compact('order'));
     }

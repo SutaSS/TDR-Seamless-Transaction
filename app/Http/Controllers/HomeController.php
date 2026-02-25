@@ -49,9 +49,10 @@ class HomeController extends Controller
                 ->where('referral_code', $affCode)
                 ->where('status', 'active')
                 ->first();
-            // Store in cookie for existing referral flow
-            if ($affiliate) {
-                cookie()->queue('affiliate_ref', $affCode, 60 * 24 * 30);
+            // No global cookie — affiliate code is per-product only.
+            // It will travel as a hidden input in the add-to-cart form on this page.
+            if (! $affiliate) {
+                $affCode = null; // invalid code, clear it
             }
         }
 

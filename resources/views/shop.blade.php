@@ -83,9 +83,7 @@
                             @csrf
                             <input type="hidden" name="product_id" value="{{ $product->id }}">
                             <input type="hidden" name="quantity" value="1">
-                            @if(request()->cookie('affiliate_code'))
-                                <input type="hidden" name="affiliate_code" value="{{ request()->cookie('affiliate_code') }}">
-                            @endif
+                            {{-- No affiliate_code here: referral only applies via product-specific share links --}}
                             <button type="submit" class="btn btn-primary flex-grow-1 fw-semibold" style="font-size:.8rem">
                                 <i class="bi bi-cart-plus me-1"></i>Keranjang
                             </button>

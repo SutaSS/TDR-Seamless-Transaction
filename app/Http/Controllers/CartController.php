@@ -7,7 +7,6 @@ use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cookie;
 use Illuminate\View\View;
 
 class CartController extends Controller
@@ -32,11 +31,9 @@ class CartController extends Controller
         $product = Product::active()->findOrFail($data['product_id']);
         $qty     = (int) ($data['quantity'] ?? 1);
 
-        // Resolve affiliate_code: request param > ?ref cookie > nothing
-        $affCode = $data['affiliate_code']
-            ?? $request->query('affiliate_code')
-            ?? Cookie::get('affiliate_ref')
-            ?? null;
+        // Affiliate code is ONLY taken from the explicit form input (product share link).
+        // Do NOT fall back to any cookie — affiliate codes are per-product, not global.
+        $affCode = $data['affiliate_code'] ?? null;
 
         // Validate that the affiliate code exists and is active
         if ($affCode) {
