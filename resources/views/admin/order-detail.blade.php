@@ -104,8 +104,8 @@
         </div>
         @endif
 
-        {{-- Update Status --}}
-        @if($nextStatus)
+        {{-- Update Status & Notifikasi (combined) --}}
+        @if($nextStatus || in_array($order->status, ['verified','processing','shipped']))
         @php
             $courierLabels = [
                 'jne_reg'   => 'JNE Reguler',
@@ -115,18 +115,55 @@
                 'pos_biasa' => 'Pos Indonesia',
             ];
             $courierDisplay = $courierLabels[$order->shipping_courier] ?? strtoupper($order->shipping_courier ?? '-');
+            $hasTelegram = (bool) $order->customer?->telegram_chat_id;
         @endphp
         <div class="card mt-3">
-            <div class="card-header"><strong>Update Status > {{ ucfirst($nextStatus) }}</strong></div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong><i class="bi bi-arrow-repeat me-1"></i> Update Status{{ $hasTelegram ? ' & Kirim Notifikasi' : '' }}</strong>
+                @if($hasTelegram)
+                    <span class="badge" style="background:rgba(16,185,129,0.15);color:#34d399">
+                        <i class="bi bi-telegram me-1"></i>Chat ID: {{ $order->customer->telegram_chat_id }}
+                    </span>
+                @else
+                    <span class="badge" style="background:rgba(245,158,11,0.15);color:#fbbf24">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Tanpa Telegram
+                    </span>
+                @endif
+            </div>
             <div class="card-body">
-                <form method="POST" action="{{ route('admin.orders.status', $order) }}">
-                    @csrf @method('PUT')
-                    <input type="hidden" name="status" value="{{ $nextStatus }}">
-                    @if($nextStatus === 'shipped')
-                        <div class="row g-3 mb-3">
+                <form method="POST" action="{{ route('admin.orders.notify', $order) }}" id="notifyForm">
+                    @csrf
+                    <div class="mb-3">
+                        <label class="form-label">Pilih Event</label>
+                        <select name="event" class="form-select" id="eventSelect" onchange="toggleResi(this.value)">
+                            @if(in_array($order->status, ['verified','processing']))
+                                <option value="order.processing">Sedang Diproses</option>
+                            @endif
+                            @if(in_array($order->status, ['verified','processing','shipped']))
+                                <option value="order.shipped" {{ $order->status === 'shipped' ? '' : '' }}>Pesanan Dikirim</option>
+                            @endif
+                            @if(in_array($order->status, ['processing','shipped']))
+                                <option value="order.delivered">Pesanan Diterima</option>
+                            @endif
+                            @if($order->payment_verified_at)
+                                <option value="payment.confirmed">Kirim Ulang: Pembayaran Dikonfirmasi</option>
+                            @endif
+                        </select>
+                        @if($hasTelegram)
+                            <div class="form-text" style="color:var(--adm-muted)">Status pesanan akan otomatis diperbarui sesuai event yang dipilih.</div>
+                        @else
+                            <div class="form-text" style="color:#fbbf24">Tidak ada Telegram — hanya status yang diperbarui, notifikasi tidak dikirim.</div>
+                        @endif
+                    </div>
+
+                    {{-- Resi field: shown only when "Pesanan Dikirim" selected --}}
+                    <div id="resiBlock" style="display:none" class="mb-3">
+                        <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Nomor Resi <span class="text-muted fw-normal">(opsional)</span></label>
-                                <input type="text" name="shipping_tracking_number" class="form-control" placeholder="JNE123456789">
+                                <input type="text" name="shipping_tracking_number" class="form-control"
+                                    value="{{ $order->shipping_tracking_number }}"
+                                    placeholder="JNE123456789">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Ekspedisi</label>
@@ -134,48 +171,13 @@
                                        style="background:rgba(255,255,255,.04);cursor:default">
                             </div>
                         </div>
-                    @endif
-                    <div class="mb-3">
-                        <label class="form-label">Catatan (opsional)</label>
-                        <input type="text" name="note" class="form-control">
                     </div>
-                    <button type="submit" class="btn btn-primary">
-                        Ubah ke {{ ucfirst($nextStatus) }}
-                    </button>
-                </form>
-            </div>
-        </div>
-        @endif
 
-        {{-- Manual Notification --}}
-        @if($order->customer?->telegram_chat_id)
-        <div class="card mt-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>Kirim Notifikasi Telegram</strong>
-                <span class="badge" style="background:rgba(16,185,129,0.15);color:#34d399">Chat ID: {{ $order->customer->telegram_chat_id }}</span>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ route('admin.orders.notify', $order) }}">
-                    @csrf
-                    <div class="mb-3">
-                        <label class="form-label">Pilih Event</label>
-                        <select name="event" class="form-select">
-                            <option value="payment.confirmed">Pembayaran Dikonfirmasi</option>
-                            <option value="order.processing">Sedang Diproses <span class="text-muted">(ubah status → processing)</span></option>
-                            <option value="order.shipped">Pesanan Dikirim <span class="text-muted">(ubah status → shipped)</span></option>
-                            <option value="order.delivered">Pesanan Diterima <span class="text-muted">(ubah status → completed)</span></option>
-                        </select>
-                        <div class="form-text" style="color:var(--adm-muted)">Event bertanda → akan otomatis memperbarui status pesanan.</div>
-                    </div>
-                    <button type="submit" class="btn btn-success btn-sm">
-                        <i class="bi bi-send me-1"></i> Kirim Sekarang
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send me-1"></i> Kirim & Update Status
                     </button>
                 </form>
             </div>
-        </div>
-        @else
-        <div class="alert alert-warning mt-3 small">
-            <i class="bi bi-exclamation-triangle me-1"></i> Pelanggan belum mengisi <strong>Telegram Chat ID</strong> di profil. Notifikasi tidak bisa dikirim.
         </div>
         @endif
     </div>
@@ -232,3 +234,16 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function toggleResi(event) {
+    document.getElementById('resiBlock').style.display = (event === 'order.shipped') ? 'block' : 'none';
+}
+// Init on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const sel = document.getElementById('eventSelect');
+    if (sel) toggleResi(sel.value);
+});
+</script>
+@endpush

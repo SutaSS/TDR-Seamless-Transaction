@@ -210,7 +210,8 @@ class AdminController extends Controller
         $this->ensureAdmin();
 
         $request->validate([
-            'event' => 'required|string',
+            'event'                    => 'required|string',
+            'shipping_tracking_number' => 'nullable|string|max:100',
         ]);
 
         $event = $request->event;
@@ -226,7 +227,12 @@ class AdminController extends Controller
             $newStatus = $statusMap[$event];
             $updates   = ['status' => $newStatus];
 
-            if ($newStatus === 'shipped')   $updates['shipped_at']   = now();
+            if ($newStatus === 'shipped') {
+                $updates['shipped_at'] = now();
+                if ($request->filled('shipping_tracking_number')) {
+                    $updates['shipping_tracking_number'] = $request->shipping_tracking_number;
+                }
+            }
             if ($newStatus === 'completed') $updates['completed_at'] = now();
 
             // Normal update — OrderObserver fires notification automatically

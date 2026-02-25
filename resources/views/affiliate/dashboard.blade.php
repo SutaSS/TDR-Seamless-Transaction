@@ -254,9 +254,9 @@
 
         {{-- Recent Orders --}}
         <div class="col-md-5">
-            <div class="card">
+            <div class="card" style="height:100%">
                 <div class="card-header fw-bold">Pesanan Terbaru</div>
-                <ul class="list-group list-group-flush">
+                <ul class="list-group list-group-flush" style="overflow-y:auto;max-height:220px">
                 @forelse($recentOrders as $order)
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
