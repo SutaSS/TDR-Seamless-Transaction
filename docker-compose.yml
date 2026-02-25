@@ -14,9 +14,6 @@ volumes:
   prometheus-data:
   grafana-data:
 
-# ──────────────────────────────────────────────────────────────────────────────
-# YAML Anchors
-# ──────────────────────────────────────────────────────────────────────────────
 x-app-env: &app-env
   APP_NAME: "${APP_NAME:-Store TDR HPZ}"
   APP_ENV: "${APP_ENV}"
@@ -111,7 +108,6 @@ services:
       - app-network
       - monitoring-network
 
-    # ✅ FIXED HEALTHCHECK (Alpine compatible)
     healthcheck:
       test: ["CMD", "php", "-v"]
       interval: 30s
