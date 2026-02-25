@@ -145,9 +145,16 @@
                 <h6 class="fw-bold mb-3">Ringkasan</h6>
 
                 @foreach($cart as $productId => $item)
-                <div class="d-flex justify-content-between mb-1" style="font-size:.82rem">
-                    <span class="text-muted text-truncate me-2" style="max-width:160px">{{ $item['product_name'] }}</span>
-                    <span>Rp {{ number_format($item['product_price'] * $item['quantity'], 0, ',', '.') }}</span>
+                <div class="mb-1" style="font-size:.82rem">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted text-truncate me-2" style="max-width:160px">{{ $item['product_name'] }}</span>
+                        <span>Rp {{ number_format($item['product_price'] * $item['quantity'], 0, ',', '.') }}</span>
+                    </div>
+                    @if(! empty($item['affiliate_code']))
+                    <div class="mt-1">
+                        <span class="aff-badge"><i class="bi bi-tag"></i>Ref: {{ $item['affiliate_code'] }}</span>
+                    </div>
+                    @endif
                 </div>
                 @endforeach
 

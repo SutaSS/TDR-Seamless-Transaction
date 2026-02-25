@@ -97,6 +97,7 @@ class AffiliateController extends Controller
         $stats       = $this->affiliateService->getStats($affiliate);
         $chartData   = $this->affiliateService->getChartData($affiliate);
         $referralLink = url('/') . '?ref=' . $affiliate->referral_code;
+        $products    = \App\Models\Product::active()->orderBy('name')->get();
 
         $recentOrders = \App\Models\Order::where('affiliate_id', $user->id)
             ->latest()
@@ -108,7 +109,7 @@ class AffiliateController extends Controller
             ->latest()
             ->first();
 
-        return view('affiliate.dashboard', compact('affiliate', 'stats', 'chartData', 'referralLink', 'recentOrders', 'pendingWithdrawal'));
+        return view('affiliate.dashboard', compact('affiliate', 'stats', 'chartData', 'referralLink', 'recentOrders', 'pendingWithdrawal', 'products'));
     }
 
     // POST /affiliate/withdraw

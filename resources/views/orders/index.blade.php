@@ -79,9 +79,18 @@
                                 </div>
                                 @if($order->items->isNotEmpty())
                                     <div style="font-size:.75rem;color:var(--tdr-muted);margin-top:2px">
-                                        {{ $order->items->first()->product_name }}
-                                        @if($order->items->count() > 1)
-                                            <span>+{{ $order->items->count() - 1 }} item lainnya</span>
+                                        @foreach($order->items->take(3) as $item)
+                                        <div class="d-inline-flex align-items-center gap-1 flex-wrap">
+                                            <span>{{ $item->product_name }}</span>
+                                            @if($item->affiliate_code)
+                                            <span style="display:inline-flex;align-items:center;gap:2px;padding:0 5px;border-radius:10px;font-size:.65rem;font-weight:600;background:rgba(212,168,67,.12);color:var(--tdr-gold);border:1px solid rgba(212,168,67,.2)">
+                                                <i class="bi bi-tag" style="font-size:.6rem"></i>{{ $item->affiliate_code }}
+                                            </span>
+                                            @endif
+                                        </div>
+                                        @endforeach
+                                        @if($order->items->count() > 3)
+                                            <span>+{{ $order->items->count() - 3 }} item lainnya</span>
                                         @endif
                                     </div>
                                 @endif

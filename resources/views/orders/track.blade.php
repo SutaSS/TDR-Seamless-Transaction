@@ -130,12 +130,21 @@
 
                 {{-- Items --}}
                 @foreach($order->items as $item)
-                <div class="d-flex justify-content-between align-items-center mb-2" style="font-size:.875rem">
-                    <div>
-                        <span class="fw-medium">{{ $item->product_name }}</span>
-                        <span style="color:var(--tdr-muted)"> × {{ $item->quantity }}</span>
+                <div class="mb-2" style="font-size:.875rem">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="fw-medium">{{ $item->product_name }}</span>
+                            <span style="color:var(--tdr-muted)"> × {{ $item->quantity }}</span>
+                        </div>
+                        <span>Rp {{ number_format($item->subtotal, 0, ',', '.') }}</span>
                     </div>
-                    <span>Rp {{ number_format($item->subtotal, 0, ',', '.') }}</span>
+                    @if($item->affiliate_code)
+                    <div class="mt-1">
+                        <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:.68rem;font-weight:600;background:rgba(212,168,67,.12);color:var(--tdr-gold);border:1px solid rgba(212,168,67,.2)">
+                            <i class="bi bi-tag"></i>Ref: {{ $item->affiliate_code }}
+                        </span>
+                    </div>
+                    @endif
                 </div>
                 @endforeach
 

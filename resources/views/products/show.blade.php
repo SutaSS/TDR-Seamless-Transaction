@@ -136,60 +136,17 @@
             <button class="btn btn-secondary fw-semibold px-4 mb-4" disabled>Stok Habis</button>
             @endif
 
-            {{-- Share + Referral Code --}}
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-2">
-
-                {{-- Copy plain product link (left) --}}
-                <button type="button" class="share-btn" onclick="copyShare('{{ url('/products/'.$product->slug) }}', this)">
+            {{-- Share button --}}
+            @php
+                $shareLink = url('/products/' . $product->slug);
+                if (auth()->check() && auth()->user()->affiliateProfile?->status === 'active') {
+                    $shareLink .= '?ref=' . auth()->user()->affiliateProfile->referral_code;
+                }
+            @endphp
+            <div class="mt-2">
+                <button type="button" class="share-btn" onclick="copyShare('{{ $shareLink }}', this)">
                     <i class="bi bi-link-45deg me-1"></i>Salin Link Produk
                 </button>
-
-                {{-- Affiliate own code OR incoming referral code (right) --}}
-                @auth
-                    @if(auth()->user()->affiliateProfile?->status === 'active')
-                    @php $myCode = auth()->user()->affiliateProfile->referral_code; @endphp
-                    <div class="d-flex align-items-center gap-2 ms-auto">
-                        <span class="text-muted" style="font-size:.78rem">Kode Referral Anda:</span>
-                        <span id="refCodeBox"
-                              style="font-family:monospace;font-size:.9rem;font-weight:700;letter-spacing:2px;
-                                     padding:4px 12px;border-radius:6px;
-                                     background:rgba(212,168,67,.12);color:var(--tdr-gold);
-                                     border:1px solid rgba(212,168,67,.3);cursor:pointer"
-                              onclick="copyCode('{{ $myCode }}', this)"
-                              title="Klik untuk menyalin kode">
-                            {{ $myCode }}
-                        </span>
-                        <button type="button" class="share-btn py-1 px-2" style="font-size:.75rem"
-                                onclick="copyCode('{{ $myCode }}', this)">
-                            <i class="bi bi-clipboard me-1"></i>Salin
-                        </button>
-                    </div>
-                    @elseif($affCode)
-                    {{-- Visitor arrived via affiliate link — show which code is active --}}
-                    <div class="d-flex align-items-center gap-2 ms-auto">
-                        <span class="text-muted" style="font-size:.78rem">Kode aktif:</span>
-                        <span style="font-family:monospace;font-size:.9rem;font-weight:700;letter-spacing:2px;
-                                     padding:4px 12px;border-radius:6px;
-                                     background:rgba(212,168,67,.12);color:var(--tdr-gold);
-                                     border:1px solid rgba(212,168,67,.3)">
-                            {{ $affCode }}
-                        </span>
-                    </div>
-                    @endif
-                @else
-                    @if($affCode)
-                    <div class="d-flex align-items-center gap-2 ms-auto">
-                        <span class="text-muted" style="font-size:.78rem">Kode aktif:</span>
-                        <span style="font-family:monospace;font-size:.9rem;font-weight:700;letter-spacing:2px;
-                                     padding:4px 12px;border-radius:6px;
-                                     background:rgba(212,168,67,.12);color:var(--tdr-gold);
-                                     border:1px solid rgba(212,168,67,.3)">
-                            {{ $affCode }}
-                        </span>
-                    </div>
-                    @endif
-                @endauth
-
             </div>
 
         </div>

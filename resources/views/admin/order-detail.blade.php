@@ -16,7 +16,7 @@
             <div class="card-header"><strong>Item Pesanan</strong></div>
             <table class="table mb-0">
                 <thead>
-                    <tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr>
+                    <tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Subtotal</th><th>Affiliate</th></tr>
                 </thead>
                 <tbody>
                 @foreach($order->items as $item)
@@ -25,6 +25,15 @@
                         <td>{{ $item->quantity }}</td>
                         <td>Rp {{ number_format($item->product_price, 0, ',', '.') }}</td>
                         <td>Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                        <td>
+                            @if($item->affiliate_code)
+                                <span class="badge" style="background:rgba(212,168,67,.15);color:var(--tdr-gold,#d4a843)">
+                                    <i class="bi bi-tag me-1"></i>{{ $item->affiliate_code }}
+                                </span>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
                 </tbody>

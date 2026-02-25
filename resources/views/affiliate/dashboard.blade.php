@@ -55,13 +55,7 @@
             </p>
         </div>
         @if($affiliate->status === 'active')
-        <div class="input-group" style="max-width:380px">
-            <input type="text" class="form-control form-control-sm" id="refLink" value="{{ $referralLink }}" readonly>
-            <button class="btn btn-sm btn-outline-secondary"
-                onclick="navigator.clipboard.writeText(document.getElementById('refLink').value);this.innerHTML='<i class=\'bi bi-check-lg\'></i> Disalin'">
-                <i class="bi bi-clipboard"></i> Salin
-            </button>
-        </div>
+        {{-- status active indicator only, no generic link --}}
         @endif
     </div>
 
@@ -92,6 +86,35 @@
             </div>
         </div>
     </div>
+
+    {{-- Per-product affiliate links --}}
+    @if($affiliate->status === 'active' && $products->isNotEmpty())
+    <div class="card shadow-sm mb-4">
+        <div class="card-header fw-bold py-3 d-flex align-items-center gap-2">
+            <i class="bi bi-link-45deg" style="color:var(--tdr-gold)"></i>
+            Link Affiliate per Produk
+            <span class="text-muted fw-normal" style="font-size:.8rem">— bagikan link ini agar klik terlacak</span>
+        </div>
+        <div class="card-body p-3">
+            <div class="d-flex flex-column gap-2">
+                @foreach($products as $prod)
+                @php $affUrl = url('/products/' . $prod->slug) . '?ref=' . $affiliate->referral_code; @endphp
+                <div class="d-flex align-items-center gap-2 p-2 rounded-3" style="background:rgba(255,255,255,.03);border:1px solid var(--tdr-border)">
+                    <div class="flex-grow-1 min-width-0" style="overflow:hidden">
+                        <div class="fw-semibold" style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $prod->name }}</div>
+                        <div class="text-muted" style="font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $affUrl }}</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                            style="font-size:.75rem;white-space:nowrap"
+                            onclick="copyAffLink('{{ $affUrl }}', this)">
+                        <i class="bi bi-clipboard me-1"></i>Salin
+                    </button>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Saldo & Pencairan --}}
     <div class="card shadow-sm mb-4">
@@ -260,6 +283,13 @@
 
 @push('scripts')
 <script>
+function copyAffLink(url, btn) {
+    navigator.clipboard.writeText(url).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Disalin!';
+        setTimeout(() => btn.innerHTML = orig, 2000);
+    });
+}
 new Chart(document.getElementById('referralChart'), {
     type: 'bar',
     data: {
