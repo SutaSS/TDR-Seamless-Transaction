@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AffiliateCommission;
 use App\Models\AffiliateProfile;
 use App\Models\AffiliateWithdrawal;
 use App\Models\NotificationLog;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\TrackingLog;
+use App\Models\User;
 use App\Services\AffiliateService;
 use App\Services\NotificationService;
 use App\Services\OrderService;
@@ -73,20 +76,32 @@ class AdminController extends Controller
     {
         $this->ensureAdmin();
 
+        $todayStart = now()->startOfDay();
+        $monthStart = now()->startOfMonth();
+
         $stats = [
-            'total_orders'      => Order::count(),
-            'total_revenue'     => Order::whereNotNull('payment_verified_at')->sum('total_amount'),
-            'pending_orders'    => Order::where('status', 'pending')->count(),
-            'total_affiliates'  => AffiliateProfile::count(),
-            'pending_affiliates'=> AffiliateProfile::where('status', 'pending')->count(),
-            'verified_orders'   => Order::where('status', 'verified')->count(),
-            'processing_orders' => Order::where('status', 'processing')->count(),
-            'shipped_orders'    => Order::where('status', 'shipped')->count(),
-            'completed_orders'  => Order::where('status', 'completed')->count(),
-            'cancelled_orders'  => Order::where('status', 'cancelled')->count(),
+            'orders_today'           => Order::where('created_at', '>=', $todayStart)->count(),
+            'orders_month'           => Order::where('created_at', '>=', $monthStart)->count(),
+            'revenue_today'          => Order::where('status', 'completed')->where('completed_at', '>=', $todayStart)->sum('total_amount'),
+            'revenue_month'          => Order::where('status', 'completed')->where('completed_at', '>=', $monthStart)->sum('total_amount'),
+            'total_orders'           => Order::count(),
+            'total_revenue'          => Order::whereNotNull('payment_verified_at')->sum('total_amount'),
+            'pending_orders'         => Order::where('status', 'pending')->count(),
+            'verified_orders'        => Order::where('status', 'verified')->count(),
+            'processing_orders'      => Order::where('status', 'processing')->count(),
+            'shipped_orders'         => Order::where('status', 'shipped')->count(),
+            'completed_orders'       => Order::where('status', 'completed')->count(),
+            'cancelled_orders'       => Order::where('status', 'cancelled')->count(),
+            'total_affiliates'       => AffiliateProfile::count(),
+            'active_affiliates'      => AffiliateProfile::where('status', 'active')->count(),
+            'pending_affiliates'     => AffiliateProfile::where('status', 'pending')->count(),
+            'pending_withdrawals'    => AffiliateWithdrawal::where('status', 'pending')->count(),
+            'commission_month'       => AffiliateCommission::where('status', 'earned')->where('earned_at', '>=', $monthStart)->sum('amount'),
+            'total_affiliate_balance'=> AffiliateProfile::sum('balance'),
+            'active_products'        => Product::where('is_active', true)->count(),
         ];
 
-        $recentOrders = Order::with('customer')->latest()->take(10)->get();
+        $recentOrders = Order::with(['customer', 'affiliate.affiliateProfile'])->latest()->take(10)->get();
 
         $affiliatePerformance = AffiliateProfile::with(['user'])
             ->withCount('commissions as conversions_count')
@@ -379,5 +394,153 @@ class AdminController extends Controller
     private function ensureAdmin(): void
     {
         abort_unless(Auth::check() && Auth::user()->role === 'admin', 403, 'Akses ditolak.');
+    }
+
+    // ─── Products ──────────────────────────────────────────────────────────
+
+    /** GET /admin/products */
+    public function products(Request $request): View
+    {
+        $this->ensureAdmin();
+
+        $products = Product::withTrashed()
+            ->when($request->search, fn ($q, $v) => $q->where('name', 'like', "%{$v}%")->orWhere('brand', 'like', "%{$v}%"))
+            ->latest()
+            ->paginate(20)
+            ->appends($request->only('search'));
+
+        return view('admin.products', compact('products'));
+    }
+
+    /** GET /admin/products/create */
+    public function createProduct(): View
+    {
+        $this->ensureAdmin();
+        return view('admin.product-form', ['product' => null]);
+    }
+
+    /** POST /admin/products */
+    public function storeProduct(Request $request): RedirectResponse
+    {
+        $this->ensureAdmin();
+
+        $data = $request->validate([
+            'name'            => 'required|string|max:255',
+            'brand'           => 'nullable|string|max:100',
+            'type'            => 'nullable|string|max:100',
+            'category'        => 'nullable|string|max:100',
+            'description'     => 'nullable|string',
+            'technical_specs' => 'nullable|string',
+            'price'           => 'required|numeric|min:0',
+            'stock'           => 'required|integer|min:0',
+            'master_video_url'=> 'nullable|url|max:500',
+            'thumbnail_url'   => 'nullable|url|max:500',
+            'is_active'       => 'boolean',
+        ]);
+
+        $data['is_active'] = $request->boolean('is_active', true);
+
+        Product::create($data);
+
+        return redirect()->route('admin.products')->with('success', 'Produk berhasil ditambahkan.');
+    }
+
+    /** GET /admin/products/{product}/edit */
+    public function editProduct(Product $product): View
+    {
+        $this->ensureAdmin();
+        return view('admin.product-form', compact('product'));
+    }
+
+    /** PUT /admin/products/{product} */
+    public function updateProduct(Request $request, Product $product): RedirectResponse
+    {
+        $this->ensureAdmin();
+
+        $data = $request->validate([
+            'name'            => 'required|string|max:255',
+            'brand'           => 'nullable|string|max:100',
+            'type'            => 'nullable|string|max:100',
+            'category'        => 'nullable|string|max:100',
+            'description'     => 'nullable|string',
+            'technical_specs' => 'nullable|string',
+            'price'           => 'required|numeric|min:0',
+            'stock'           => 'required|integer|min:0',
+            'master_video_url'=> 'nullable|url|max:500',
+            'thumbnail_url'   => 'nullable|url|max:500',
+            'is_active'       => 'boolean',
+        ]);
+
+        $data['is_active'] = $request->boolean('is_active');
+
+        $product->update($data);
+
+        return redirect()->route('admin.products')->with('success', 'Produk berhasil diperbarui.');
+    }
+
+    /** DELETE /admin/products/{product} */
+    public function deleteProduct(Product $product): RedirectResponse
+    {
+        $this->ensureAdmin();
+        $product->delete();
+        return back()->with('success', 'Produk berhasil dihapus (soft delete).');
+    }
+
+    // ─── Users ─────────────────────────────────────────────────────────────
+
+    /** GET /admin/users */
+    public function users(Request $request): View
+    {
+        $this->ensureAdmin();
+
+        $users = User::withCount('orders')
+            ->when($request->search, fn ($q, $v) => $q->where('name', 'like', "%{$v}%")->orWhere('email', 'like', "%{$v}%"))
+            ->when($request->role, fn ($q, $v) => $q->where('role', $v))
+            ->latest()
+            ->paginate(25)
+            ->appends($request->only('search', 'role'));
+
+        return view('admin.users', compact('users'));
+    }
+
+    // ─── Audit Log ─────────────────────────────────────────────────────────
+
+    /** GET /admin/audit-log */
+    public function auditLog(Request $request): View
+    {
+        $this->ensureAdmin();
+
+        $logs = TrackingLog::with('order.customer')
+            ->when($request->search, fn ($q, $v) =>
+                $q->where('status_title', 'like', "%{$v}%")
+                  ->orWhere('description', 'like', "%{$v}%")
+                  ->orWhereHas('order', fn ($oq) => $oq->where('order_number', 'like', "%{$v}%"))
+            )
+            ->orderByDesc('created_at')
+            ->paginate(30)
+            ->appends($request->only('search'));
+
+        return view('admin.audit-log', compact('logs'));
+    }
+
+    // ─── Commissions ───────────────────────────────────────────────────────
+
+    /** GET /admin/commissions */
+    public function commissions(Request $request): View
+    {
+        $this->ensureAdmin();
+
+        $commissions = AffiliateCommission::with(['order.customer', 'affiliate.affiliateProfile'])
+            ->when($request->status, fn ($q, $v) => $q->where('status', $v))
+            ->latest()
+            ->paginate(25)
+            ->appends($request->only('status'));
+
+        $summary = [
+            'pending' => AffiliateCommission::where('status', 'pending')->sum('amount'),
+            'earned'  => AffiliateCommission::where('status', 'earned')->sum('amount'),
+        ];
+
+        return view('admin.commissions', compact('commissions', 'summary'));
     }
 }

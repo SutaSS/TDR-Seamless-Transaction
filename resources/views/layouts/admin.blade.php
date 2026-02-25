@@ -374,25 +374,53 @@
         <div class="nav-section">
             <div class="nav-label">Menu Utama</div>
             <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                <i class="bi bi-grid-1x2"></i> Dashboard
-            </a>
-            <a href="{{ route('admin.orders') }}" class="nav-link {{ request()->routeIs('admin.orders*') ? 'active' : '' }}">
-                <i class="bi bi-bag"></i> Pesanan
+                <i class="bi bi-grid-1x2"></i> Dasbor
             </a>
 
-            <div class="nav-label">Manajemen</div>
+            <div class="nav-label">Afiliasi</div>
+            @php $pendingAff = \App\Models\AffiliateProfile::where('status','pending')->count(); @endphp
             <a href="{{ route('admin.affiliates') }}" class="nav-link {{ request()->routeIs('admin.affiliates') ? 'active' : '' }}">
-                <i class="bi bi-people"></i> Affiliates
+                <i class="bi bi-people"></i> Afiliasi
+                @if($pendingAff > 0)
+                    <span class="badge rounded-pill ms-auto" style="background:rgba(245,158,11,0.2);color:#fbbf24;font-size:.68rem">{{ $pendingAff }}</span>
+                @endif
             </a>
             @php $pendingWithdrawals = \App\Models\AffiliateWithdrawal::pending()->count(); @endphp
             <a href="{{ route('admin.withdrawals') }}" class="nav-link {{ request()->routeIs('admin.withdrawals*') ? 'active' : '' }}">
-                <i class="bi bi-cash-stack"></i> Cairkan Dana
+                <i class="bi bi-cash-stack"></i> Penarikan Dana
                 @if($pendingWithdrawals > 0)
                     <span class="badge rounded-pill ms-auto" style="background:rgba(245,158,11,0.2);color:#fbbf24;font-size:.68rem">{{ $pendingWithdrawals }}</span>
                 @endif
             </a>
+            <a href="{{ route('admin.commissions') }}" class="nav-link {{ request()->routeIs('admin.commissions') ? 'active' : '' }}">
+                <i class="bi bi-percent"></i> Komisi
+            </a>
+
+            <div class="nav-label">Log</div>
             <a href="{{ route('admin.notifications') }}" class="nav-link {{ request()->routeIs('admin.notifications') ? 'active' : '' }}">
-                <i class="bi bi-bell"></i> Notifikasi
+                <i class="bi bi-bell"></i> Log Notifikasi
+            </a>
+            <a href="{{ route('admin.audit-log') }}" class="nav-link {{ request()->routeIs('admin.audit-log') ? 'active' : '' }}">
+                <i class="bi bi-journal-text"></i> Audit Log
+            </a>
+
+            <div class="nav-label">Transaksi</div>
+            @php $pendingOrders = \App\Models\Order::where('status','pending')->count(); @endphp
+            <a href="{{ route('admin.orders') }}" class="nav-link {{ request()->routeIs('admin.orders*') ? 'active' : '' }}">
+                <i class="bi bi-bag"></i> Pesanan
+                @if($pendingOrders > 0)
+                    <span class="badge rounded-pill ms-auto" style="background:rgba(245,158,11,0.2);color:#fbbf24;font-size:.68rem">{{ $pendingOrders }}</span>
+                @endif
+            </a>
+
+            <div class="nav-label">Katalog</div>
+            <a href="{{ route('admin.products') }}" class="nav-link {{ request()->routeIs('admin.products*') ? 'active' : '' }}">
+                <i class="bi bi-box-seam"></i> Produk
+            </a>
+
+            <div class="nav-label">Manajemen</div>
+            <a href="{{ route('admin.users') }}" class="nav-link {{ request()->routeIs('admin.users') ? 'active' : '' }}">
+                <i class="bi bi-person-lines-fill"></i> Pengguna
             </a>
         </div>
         <div class="sidebar-footer">

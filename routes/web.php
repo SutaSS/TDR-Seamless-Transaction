@@ -100,6 +100,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/withdrawals/{withdrawal}/approve',    [AdminController::class, 'approveWithdrawal'])->name('withdrawals.approve');
         Route::post('/withdrawals/{withdrawal}/reject',     [AdminController::class, 'rejectWithdrawal'])->name('withdrawals.reject');
         Route::get('/notifications',         [AdminController::class, 'notifications'])->name('notifications');
+        // Products
+        Route::get('/products',              [AdminController::class, 'products'])->name('products');
+        Route::get('/products/create',       [AdminController::class, 'createProduct'])->name('products.create');
+        Route::post('/products',             [AdminController::class, 'storeProduct'])->name('products.store');
+        Route::get('/products/{product}/edit', [AdminController::class, 'editProduct'])->name('products.edit');
+        Route::put('/products/{product}',    [AdminController::class, 'updateProduct'])->name('products.update');
+        Route::delete('/products/{product}', [AdminController::class, 'deleteProduct'])->name('products.delete');
+        // Users
+        Route::get('/users',                 [AdminController::class, 'users'])->name('users');
+        // Audit Log
+        Route::get('/audit-log',             [AdminController::class, 'auditLog'])->name('audit-log');
+        // Commissions
+        Route::get('/commissions',           [AdminController::class, 'commissions'])->name('commissions');
     });
 });
 
