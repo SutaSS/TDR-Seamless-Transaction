@@ -39,6 +39,7 @@ Route::middleware('auth')->prefix('profile')->name('profile.')->group(function (
 
 //Order Tracking — harus login
 Route::middleware('auth')->group(function () {
+    Route::get('/orders',               [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{orderNumber}', [OrderController::class, 'track'])->name('orders.track');
 });
 

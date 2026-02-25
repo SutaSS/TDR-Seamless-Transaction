@@ -132,10 +132,10 @@
                 @foreach($order->items as $item)
                 <div class="d-flex justify-content-between align-items-center mb-2" style="font-size:.875rem">
                     <div>
-                        <span class="fw-medium">{{ $item->product_name }}</span>
+                        <span class="fw-medium">{{ $item->product?->name ?? 'Produk' }}</span>
                         <span style="color:var(--tdr-muted)"> × {{ $item->quantity }}</span>
                     </div>
-                    <span>Rp {{ number_format($item->subtotal, 0, ',', '.') }}</span>
+                    <span>Rp {{ number_format($item->price * $item->quantity, 0, ',', '.') }}</span>
                 </div>
                 @endforeach
 

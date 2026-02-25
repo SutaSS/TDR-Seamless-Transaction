@@ -420,6 +420,9 @@
                         <li class="nav-item"><a class="nav-link" href="{{ route('shop') }}">
                             <i class="bi bi-grid-3x3-gap me-1"></i>Produk
                         </a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('orders.index') }}">
+                            <i class="bi bi-clock-history me-1"></i>Histori
+                        </a></li>
                     @endif
                     @if(auth()->user()->role === 'customer')
                         <li class="nav-item"><a class="nav-link" href="{{ route('affiliate.register.form') }}">
@@ -561,6 +564,13 @@
         </div>
     </div>
 </div>
+<script>
+    // Auto-show modal setelah redirect (Bootstrap harus sudah load)
+    document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('telegramSetupModal');
+        if (el) { new bootstrap.Modal(el).show(); }
+    });
+</script>
 @endif
 {{-- ─────────────────────────────────────────────────────────────── --}}
 
@@ -610,14 +620,6 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-@if(session('show_telegram_modal'))
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var el = document.getElementById('telegramSetupModal');
-        if (el) { new bootstrap.Modal(el).show(); }
-    });
-</script>
-@endif
 @stack('scripts')
 </body>
 </html>

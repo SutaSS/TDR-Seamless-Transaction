@@ -29,11 +29,18 @@
                 <a href="{{ route('orders.track', $order->order_number) }}"
                    class="btn w-100 mt-2 fw-semibold"
                    style="background:rgba(212,168,67,.15);color:var(--tdr-gold);border:1px solid rgba(212,168,67,.3);border-radius:10px">
-                    <i class="bi bi-map me-2"></i>Lacak Pesanan
+                    <i class="bi bi-map me-2"></i>Lacak Pesanan Ini
                 </a>
                 @endif
 
-                <a href="/" class="btn btn-outline-light btn-sm w-100 mt-2">Kembali ke Beranda</a>
+                <div class="d-flex gap-2 mt-2">
+                    <a href="{{ route('orders.index') }}" class="btn btn-outline-light btn-sm flex-fill">
+                        <i class="bi bi-clock-history me-1"></i>Histori
+                    </a>
+                    <a href="/" class="btn btn-outline-light btn-sm flex-fill">
+                        <i class="bi bi-house me-1"></i>Beranda
+                    </a>
+                </div>
             </div>
         </div>
     </div>
