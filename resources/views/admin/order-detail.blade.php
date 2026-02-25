@@ -74,7 +74,7 @@
             <div class="card-body small">
                 <p class="mb-2">Pembayaran akan dikonfirmasi otomatis oleh <strong>Midtrans webhook</strong> setelah pelanggan selesai bayar.</p>
                 <p class="mb-0 text-muted">Alur: Snap payment → webhook <code>settlement</code> → status otomatis <em>paid</em> → notifikasi Telegram terkirim.</p>
-                @if(app()->isLocal())
+                @if(!app()->isProduction())
                 <hr>
                 <p class="text-danger fw-semibold mb-2">🧪 Mode Local — Simulasi Pembayaran</p>
                 <form method="POST" action="{{ route('admin.orders.simulate-payment', $order) }}">

@@ -14,7 +14,7 @@
 
     @if($affiliate)
     <div class="alert alert-success py-2 mb-3">
-        <i class="bi bi-tag-fill"></i>
+        <i class="bi bi-tag-fill me-1"></i>
         Referral dari <strong>{{ $affiliate->user?->name ?? $affiliate->referral_code }}</strong> aktif — komisi 10% otomatis tercatat.
     </div>
     @endif
@@ -25,15 +25,13 @@
 
         <div class="row g-4">
 
-            {{-- ================================================================
-                 KOLOM KIRI — Pengiriman & Data Pembeli
-            ================================================================ --}}
+            {{-- LEFT COLUMN --}}
             <div class="col-lg-7">
 
-                {{-- 1. Alamat Pengiriman --}}
+                {{-- Shipping Address --}}
                 <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-white fw-bold border-bottom py-3">
-                        <i class="bi bi-geo-alt text-primary me-1"></i> Alamat Pengiriman
+                    <div class="card-header fw-bold py-3">
+                        <i class="bi bi-geo-alt me-1" style="color:var(--tdr-red)"></i> Alamat Pengiriman
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-3">
@@ -94,15 +92,15 @@
                     </div>
                 </div>
 
-                {{-- 2. Pilih Ekspedisi --}}
+                {{-- Courier Selection --}}
                 <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-white fw-bold border-bottom py-3">
-                        <i class="bi bi-truck text-primary me-1"></i> Pilih Ekspedisi
+                    <div class="card-header fw-bold py-3">
+                        <i class="bi bi-truck me-1" style="color:var(--tdr-red)"></i> Pilih Ekspedisi
                     </div>
                     <div class="card-body p-3">
                         @foreach($couriers as $key => $courier)
-                        <label class="courier-option d-flex align-items-center gap-3 p-3 rounded mb-2 border cursor-pointer {{ old('shipping_courier') === $key ? 'border-primary bg-light' : '' }}"
-                               for="courier_{{ $key }}" style="cursor:pointer">
+                        <label class="courier-option d-flex align-items-center gap-3 p-3 rounded-3 mb-2 {{ old('shipping_courier') === $key ? 'selected' : '' }}"
+                               for="courier_{{ $key }}" style="cursor:pointer;border:1px solid var(--tdr-border);transition:all .15s ease">
                             <input type="radio" name="shipping_courier" id="courier_{{ $key }}"
                                    value="{{ $key }}"
                                    data-cost="{{ $courier['cost'] }}"
@@ -112,7 +110,7 @@
                             <div class="flex-grow-1">
                                 <div class="fw-semibold small">{{ $courier['label'] }}</div>
                             </div>
-                            <div class="text-end fw-bold text-primary small">
+                            <div class="text-end fw-bold small" style="color:var(--tdr-red)">
                                 {{ $courier['cost'] > 0 ? 'Rp ' . number_format($courier['cost'], 0, ',', '.') : 'GRATIS' }}
                             </div>
                         </label>
@@ -121,10 +119,10 @@
                     </div>
                 </div>
 
-                {{-- 3. Catatan (opsional) --}}
+                {{-- Notes --}}
                 <div class="card shadow-sm">
-                    <div class="card-header bg-white fw-bold border-bottom py-3">
-                        <i class="bi bi-chat-left-text text-secondary me-1"></i> Catatan <span class="fw-normal text-muted">(opsional)</span>
+                    <div class="card-header fw-bold py-3">
+                        <i class="bi bi-chat-left-text me-1" style="color:var(--tdr-muted)"></i> Catatan <span class="fw-normal text-muted">(opsional)</span>
                     </div>
                     <div class="card-body p-4">
                         <textarea name="notes" rows="2" class="form-control"
@@ -132,32 +130,32 @@
                     </div>
                 </div>
 
-            </div>{{-- end col-kiri --}}
+            </div>
 
-            {{-- ================================================================
-                 KOLOM KANAN — Ringkasan Pesanan
-            ================================================================ --}}
+            {{-- RIGHT COLUMN --}}
             <div class="col-lg-5">
                 <div class="card shadow-sm sticky-top" style="top: 16px">
-                    <div class="card-header bg-white fw-bold border-bottom py-3">
-                        <i class="bi bi-bag-check text-primary me-1"></i> Ringkasan Pesanan
+                    <div class="card-header fw-bold py-3">
+                        <i class="bi bi-bag-check me-1" style="color:var(--tdr-red)"></i> Ringkasan Pesanan
                     </div>
                     <div class="card-body p-4">
 
-                        {{-- Produk --}}
+                        {{-- Product --}}
                         <div class="d-flex gap-3 mb-4">
                             @if($product->thumbnail_url)
                                 <img src="{{ $product->thumbnail_url }}" class="rounded"
                                      style="width:64px;height:64px;object-fit:cover" alt="{{ $product->name }}">
                             @else
-                                <div class="bg-light rounded d-flex align-items-center justify-content-center flex-shrink-0"
-                                     style="width:64px;height:64px;font-size:1.8rem">🏍</div>
+                                <div class="rounded d-flex align-items-center justify-content-center flex-shrink-0"
+                                     style="width:64px;height:64px;background:rgba(255,255,255,0.04);color:var(--tdr-muted);font-size:1.5rem">
+                                    <i class="bi bi-box-seam"></i>
+                                </div>
                             @endif
                             <div class="flex-grow-1">
                                 <div class="fw-semibold">{{ $product->name }}</div>
                                 <div class="text-muted small">Rp {{ number_format($product->price, 0, ',', '.') }} / pcs</div>
                                 @if($product->stock !== null && $product->stock <= 10 && $product->stock > 0)
-                                    <div class="text-warning small">Stok tersisa {{ $product->stock }}</div>
+                                    <div class="small" style="color:var(--tdr-gold)">Stok tersisa {{ $product->stock }}</div>
                                 @endif
                             </div>
                         </div>
@@ -166,7 +164,7 @@
                         <div class="d-flex align-items-center justify-content-between mb-4">
                             <span class="small fw-semibold text-muted">Jumlah</span>
                             <div class="input-group" style="width:130px">
-                                <button type="button" class="btn btn-outline-secondary" id="btnMinus">−</button>
+                                <button type="button" class="btn btn-outline-secondary" id="btnMinus">-</button>
                                 <input type="number" name="qty" id="qtyInput"
                                        class="form-control text-center"
                                        value="{{ old('qty', $qty) }}" min="1"
@@ -177,7 +175,7 @@
 
                         <hr>
 
-                        {{-- Rincian Harga --}}
+                        {{-- Price Details --}}
                         <div class="d-flex justify-content-between mb-2">
                             <span class="small text-muted">Subtotal</span>
                             <span class="small fw-semibold" id="subtotalDisplay">
@@ -195,7 +193,7 @@
 
                         <div class="d-flex justify-content-between mb-4">
                             <span class="fw-bold">Total Bayar</span>
-                            <span class="fs-5 fw-bold text-danger" id="totalDisplay">
+                            <span class="fs-5 fw-bold" style="color:var(--tdr-red)" id="totalDisplay">
                                 Rp {{ number_format((float)$product->price * $qty + 15000, 0, ',', '.') }}
                             </span>
                         </div>
@@ -206,19 +204,29 @@
 
                         <div class="text-center mt-2">
                             <small class="text-muted">
-                                <i class="bi bi-shield-check text-success"></i>
+                                <i class="bi bi-shield-check me-1" style="color:#5dd39e"></i>
                                 Transaksi aman & terenkripsi via Midtrans
                             </small>
                         </div>
 
                     </div>
                 </div>
-            </div>{{-- end col-kanan --}}
+            </div>
 
-        </div>{{-- end row --}}
+        </div>
     </form>
 </div>
 @endsection
+
+@push('styles')
+<style>
+.courier-option.selected,
+.courier-option:has(input:checked) {
+    border-color: var(--tdr-red) !important;
+    background: rgba(230,57,70,0.05);
+}
+</style>
+@endpush
 
 @push('scripts')
 <script>
@@ -256,9 +264,8 @@ document.querySelectorAll('input[name="shipping_courier"]').forEach(function (ra
     radio.addEventListener('change', function () {
         currentShippingCost = parseInt(this.dataset.cost) || 0;
         recalc();
-        // Highlight selected
-        document.querySelectorAll('.courier-option').forEach(el => el.classList.remove('border-primary', 'bg-light'));
-        this.closest('.courier-option').classList.add('border-primary', 'bg-light');
+        document.querySelectorAll('.courier-option').forEach(el => el.classList.remove('selected'));
+        this.closest('.courier-option').classList.add('selected');
     });
 });
 
@@ -266,4 +273,3 @@ document.querySelectorAll('input[name="shipping_courier"]').forEach(function (ra
 recalc();
 </script>
 @endpush
-

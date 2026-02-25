@@ -3,6 +3,26 @@
 
 @push('styles')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+.aff-stat-card {
+    text-align: center;
+    padding: 20px 12px;
+    border-radius: 12px;
+}
+.aff-stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.aff-stat-card .stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--tdr-muted);
+    margin-top: 4px;
+}
+</style>
 @endpush
 
 @section('content')
@@ -10,8 +30,8 @@
 
     {{-- Pending status warning --}}
     @if($affiliate->status === 'pending')
-    <div class="alert alert-warning border-warning d-flex align-items-start gap-3 mb-4">
-        <div style="font-size:1.8rem">⏳</div>
+    <div class="alert alert-warning d-flex align-items-start gap-3 mb-4">
+        <div style="font-size:1.4rem"><i class="bi bi-hourglass-split"></i></div>
         <div>
             <div class="fw-bold">Akun Affiliate Anda Sedang Ditinjau</div>
             <div class="small">Pendaftaran Anda telah diterima dan sedang menunggu persetujuan admin. Proses biasanya selesai dalam 1x24 jam.
@@ -24,19 +44,22 @@
     </div>
     @endif
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
             <h4 class="fw-bold mb-0">Dashboard Affiliate</h4>
             <p class="text-muted mb-0">{{ $affiliate->user?->name }} · <code>{{ $affiliate->referral_code }}</code>
-                <span class="badge {{ $affiliate->status === 'active' ? 'bg-success' : ($affiliate->status === 'pending' ? 'bg-warning text-dark' : 'bg-danger') }} ms-1">{{ $affiliate->status }}</span>
+                <span class="badge ms-1 {{ $affiliate->status === 'active' ? '' : ($affiliate->status === 'pending' ? '' : '') }}"
+                      style="background:{{ $affiliate->status === 'active' ? 'rgba(25,135,84,0.15)' : ($affiliate->status === 'pending' ? 'rgba(212,168,67,0.15)' : 'rgba(230,57,70,0.15)') }};color:{{ $affiliate->status === 'active' ? '#5dd39e' : ($affiliate->status === 'pending' ? 'var(--tdr-gold)' : '#ff6b7a') }}">
+                    {{ $affiliate->status }}
+                </span>
             </p>
         </div>
         @if($affiliate->status === 'active')
-        <div class="input-group" style="max-width:350px">
+        <div class="input-group" style="max-width:380px">
             <input type="text" class="form-control form-control-sm" id="refLink" value="{{ $referralLink }}" readonly>
             <button class="btn btn-sm btn-outline-secondary"
-                onclick="navigator.clipboard.writeText(document.getElementById('refLink').value);this.textContent='✓ Disalin'">
-                Salin Link
+                onclick="navigator.clipboard.writeText(document.getElementById('refLink').value);this.innerHTML='<i class=\'bi bi-check-lg\'></i> Disalin'">
+                <i class="bi bi-clipboard"></i> Salin
             </button>
         </div>
         @endif
@@ -45,39 +68,39 @@
     {{-- Stat cards --}}
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
-            <div class="card p-3 text-center border-0 shadow-sm">
-                <div class="text-muted small">Total Klik</div>
-                <div class="fs-2 fw-bold text-primary">{{ $stats['total_clicks'] }}</div>
+            <div class="card aff-stat-card">
+                <div class="stat-value" style="color:#60a5fa">{{ $stats['total_clicks'] }}</div>
+                <div class="stat-label">Total Klik</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card p-3 text-center border-0 shadow-sm">
-                <div class="text-muted small">Konversi</div>
-                <div class="fs-2 fw-bold text-success">{{ $stats['total_conversions'] }}</div>
+            <div class="card aff-stat-card">
+                <div class="stat-value" style="color:#5dd39e">{{ $stats['total_conversions'] }}</div>
+                <div class="stat-label">Konversi</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card p-3 text-center border-0 shadow-sm">
-                <div class="text-muted small">Conversion Rate</div>
-                <div class="fs-2 fw-bold text-warning">{{ $stats['conversion_rate'] }}%</div>
+            <div class="card aff-stat-card">
+                <div class="stat-value" style="color:var(--tdr-gold)">{{ $stats['conversion_rate'] }}%</div>
+                <div class="stat-label">Conversion Rate</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card p-3 text-center border-0 shadow-sm">
-                <div class="text-muted small">Total Komisi</div>
-                <div class="fs-5 fw-bold text-danger">Rp {{ number_format($stats['total_commission'], 0, ',', '.') }}</div>
+            <div class="card aff-stat-card">
+                <div class="stat-value" style="color:var(--tdr-red);font-size:1.25rem">Rp {{ number_format($stats['total_commission'], 0, ',', '.') }}</div>
+                <div class="stat-label">Total Komisi</div>
             </div>
         </div>
     </div>
 
-    {{-- ── Payout Identity ────────────────────────────────────────────────── --}}
+    {{-- Payout Identity --}}
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-wallet2 text-success me-1"></i> Data Pencairan Komisi</span>
+        <div class="card-header fw-bold py-3 d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-wallet2 me-1" style="color:#5dd39e"></i> Data Pencairan Komisi</span>
             @if($affiliate->bank_account_number)
-                <span class="badge bg-success">Lengkap</span>
+                <span class="badge" style="background:rgba(25,135,84,0.15);color:#5dd39e">Lengkap</span>
             @else
-                <span class="badge bg-warning text-dark">Belum diisi</span>
+                <span class="badge" style="background:rgba(212,168,67,0.15);color:var(--tdr-gold)">Belum diisi</span>
             @endif
         </div>
         <div class="card-body p-4">
@@ -89,9 +112,9 @@
                 @method('PUT')
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold small">Nama Bank / E-Wallet</label>
+                        <label class="form-label small">Nama Bank / E-Wallet</label>
                         <select name="bank_name" class="form-select @error('bank_name') is-invalid @enderror" required>
-                            <option value="">— Pilih —</option>
+                            <option value="">-- Pilih --</option>
                             @foreach([
                                 'OVO'          => 'OVO',
                                 'GoPay'        => 'GoPay',
@@ -111,7 +134,7 @@
                         @error('bank_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold small">Nomor Rekening / Akun</label>
+                        <label class="form-label small">Nomor Rekening / Akun</label>
                         <input type="text" name="bank_account_number"
                                value="{{ old('bank_account_number', $affiliate->bank_account_number) }}"
                                class="form-control @error('bank_account_number') is-invalid @enderror"
@@ -119,7 +142,7 @@
                         @error('bank_account_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold small">Nama Pemilik Akun</label>
+                        <label class="form-label small">Nama Pemilik Akun</label>
                         <input type="text" name="bank_account_holder"
                                value="{{ old('bank_account_holder', $affiliate->bank_account_holder) }}"
                                class="form-control @error('bank_account_holder') is-invalid @enderror"
@@ -140,7 +163,7 @@
         {{-- Chart --}}
         <div class="col-md-7">
             <div class="card p-3">
-                <h6 class="fw-bold">Klik & Konversi — 7 Hari Terakhir</h6>
+                <h6 class="fw-bold mb-3">Klik & Konversi — 7 Hari Terakhir</h6>
                 <canvas id="referralChart" height="100"></canvas>
             </div>
         </div>
@@ -183,23 +206,37 @@ new Chart(document.getElementById('referralChart'), {
             {
                 label: 'Klik',
                 data: {!! json_encode($chartData['clicks']) !!},
-                backgroundColor: 'rgba(13,110,253,.5)',
-                borderColor: '#0d6efd',
-                borderWidth: 1
+                backgroundColor: 'rgba(96,165,250,.4)',
+                borderColor: '#60a5fa',
+                borderWidth: 1,
+                borderRadius: 4
             },
             {
                 label: 'Konversi',
                 data: {!! json_encode($chartData['convs']) !!},
-                backgroundColor: 'rgba(25,135,84,.5)',
-                borderColor: '#198754',
-                borderWidth: 1
+                backgroundColor: 'rgba(93,211,158,.4)',
+                borderColor: '#5dd39e',
+                borderWidth: 1,
+                borderRadius: 4
             }
         ]
     },
     options: {
         responsive: true,
-        plugins: { legend: { position: 'bottom' } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        plugins: {
+            legend: { position: 'bottom', labels: { color: '#8b8fa3', font: { family: 'Inter' } } }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { precision: 0, color: '#6b7084' },
+                grid: { color: 'rgba(255,255,255,0.04)' }
+            },
+            x: {
+                ticks: { color: '#6b7084' },
+                grid: { display: false }
+            }
+        }
     }
 });
 </script>
