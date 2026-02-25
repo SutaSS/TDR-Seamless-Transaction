@@ -7,16 +7,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderItem extends Model
 {
-    public $timestamps = false;
 
     protected $fillable = [
-        'order_id', 'product_id', 'product_name_snapshot',
-        'qty', 'unit_price', 'line_total',
+        'order_id',
+        'product_id',
+        'product_name',
+        'product_price',
+        'quantity',
+        'subtotal',
+        'affiliate_code',
+        'commission_amount',
     ];
 
     protected $casts = [
-        'unit_price' => 'decimal:2',
-        'line_total' => 'decimal:2',
+        'product_price'     => 'decimal:2',
+        'subtotal'          => 'decimal:2',
+        'quantity'          => 'integer',
+        'commission_amount' => 'decimal:2',
     ];
 
     public function order(): BelongsTo

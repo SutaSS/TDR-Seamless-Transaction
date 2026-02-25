@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Notification;
+use App\Models\NotificationLog;
 use App\Services\TelegramService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -13,34 +13,27 @@ class SendTelegramNotification implements ShouldQueue
 {
     use Queueable, InteractsWithQueue;
 
-    /**
-     * Max retry attempts (0-indexed: 0, 1, 2 = 3 attempts total).
-     */
     public int $tries = 3;
 
     public function __construct(public int $notificationId) {}
 
-    /**
-     * Execute the job.
-     */
+
     public function handle(TelegramService $telegram): void
     {
-        $notification = Notification::find($this->notificationId);
+        $notification = NotificationLog::find($this->notificationId);
 
         if (! $notification) {
             Log::warning("SendTelegramNotification: Notification #{$this->notificationId} not found");
             return;
         }
 
-        // Sudah dikirim sebelumnya (idempotency)
         if ($notification->status === 'sent') {
             return;
         }
 
-        // Resolve chat_id dari user terkait
-        $chatId = null;
+        $chatId = $notification->recipient;
 
-        if ($notification->user_id) {
+        if (empty($chatId) && $notification->user_id) {
             $chatId = $notification->user?->telegram_chat_id;
         }
 
@@ -53,7 +46,7 @@ class SendTelegramNotification implements ShouldQueue
             return;
         }
 
-        $success = $telegram->sendMessage($chatId, $notification->message_body);
+        $success = $telegram->sendMessage($chatId, $notification->message_content);
 
         if ($success) {
             $notification->update([
@@ -62,12 +55,10 @@ class SendTelegramNotification implements ShouldQueue
             ]);
             Log::info("SendTelegramNotification: Sent notification #{$this->notificationId} to {$chatId}");
         } else {
-            $notification->increment('retry_count');
-
             if ($this->attempts() >= $this->tries) {
                 $notification->update([
-                    'status'     => 'failed',
-                    'last_error' => 'Max retries exceeded',
+                    'status'        => 'failed',
+                    'error_message' => 'Max retries exceeded',
                 ]);
                 Log::error("SendTelegramNotification: Permanently failed notification #{$this->notificationId}");
                 $this->fail();

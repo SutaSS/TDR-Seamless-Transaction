@@ -9,33 +9,50 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
+
     protected $fillable = [
-        'order_number', 'customer_user_id', 'affiliate_id', 'referral_click_id',
-        'subtotal_amount', 'discount_amount', 'total_amount', 'currency',
-        'order_status', 'payment_status', 'tracking_number', 'shipping_provider',
-        'customer_name', 'customer_phone', 'note', 'paid_at', 'delivered_at',
-        'shipping_address', 'shipping_city', 'shipping_province',
-        'shipping_postal_code', 'shipping_courier', 'shipping_cost',
-        'status_changed_at',
+        'order_number',
+        'customer_id',
+        'affiliate_id',
+        'subtotal',
+        'commission_amount',
+        'shipping_cost',
+        'total_amount',
+        'status',
+        'payment_method',
+        'midtrans_transaction_id',
+        'midtrans_snap_token',
+        'payment_verified_at',
+        'shipping_address',
+        'shipping_courier',
+        'shipping_tracking_number',
+        'shipped_at',
+        'completed_at',
+        'cancelled_at',
+        'cancellation_reason',
+        'notes',
     ];
 
     protected $casts = [
-        'subtotal_amount'  => 'decimal:2',
-        'discount_amount'  => 'decimal:2',
-        'total_amount'     => 'decimal:2',
-        'paid_at'          => 'datetime',
-        'delivered_at'     => 'datetime',
-        'status_changed_at'=> 'datetime',
+        'subtotal'            => 'decimal:2',
+        'commission_amount'   => 'decimal:2',
+        'shipping_cost'       => 'decimal:2',
+        'total_amount'        => 'decimal:2',
+        'payment_verified_at' => 'datetime',
+        'shipped_at'          => 'datetime',
+        'completed_at'        => 'datetime',
+        'cancelled_at'        => 'datetime',
     ];
 
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'customer_user_id');
+        return $this->belongsTo(User::class, 'customer_id');
     }
+
 
     public function affiliate(): BelongsTo
     {
-        return $this->belongsTo(Affiliate::class);
+        return $this->belongsTo(User::class, 'affiliate_id');
     }
 
     public function items(): HasMany
@@ -43,23 +60,33 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function payment(): HasOne
+    public function isPaid(): bool
     {
-        return $this->hasOne(Payment::class);
+        return $this->payment_verified_at !== null;
     }
 
-    public function conversion(): HasOne
+    public function isCompleted(): bool
     {
-        return $this->hasOne(AffiliateConversion::class);
+        return $this->status === 'completed';
     }
 
-    public function referralClick(): BelongsTo
+    public function isCancelled(): bool
     {
-        return $this->belongsTo(AffiliateReferralClick::class);
+        return $this->status === 'cancelled';
     }
 
-    public function statusHistories(): HasMany
+    public function trackingLogs(): HasMany
     {
-        return $this->hasMany(OrderStatusHistory::class);
+        return $this->hasMany(TrackingLog::class);
+    }
+
+    public function commission(): HasOne
+    {
+        return $this->hasOne(AffiliateCommission::class);
+    }
+
+    public function notificationLogs(): HasMany
+    {
+        return $this->hasMany(NotificationLog::class);
     }
 }

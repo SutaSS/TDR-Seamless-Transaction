@@ -1,0 +1,258 @@
+version: "3.9"
+
+networks:
+  app-network:
+    driver: bridge
+  monitoring-network:
+    driver: bridge
+
+volumes:
+  app-storage:
+  mysql-data:
+  redis-cache-data:
+  redis-queue-data:
+  prometheus-data:
+  grafana-data:
+
+x-app-env: &app-env
+  APP_NAME: "${APP_NAME:-Store TDR HPZ}"
+  APP_ENV: "${APP_ENV}"
+  APP_KEY: "${APP_KEY}"
+  APP_DEBUG: "${APP_DEBUG:-false}"
+  APP_URL: "${APP_URL}"
+
+  DB_CONNECTION: mysql
+  DB_HOST: mysql
+  DB_PORT: 3306
+  DB_DATABASE: "${DB_DATABASE}"
+  DB_USERNAME: "${DB_USERNAME}"
+  DB_PASSWORD: "${DB_PASSWORD}"
+
+  REDIS_CLIENT: predis
+  REDIS_HOST: redis-cache
+  REDIS_PASSWORD: "${REDIS_PASSWORD:-null}"
+  REDIS_PORT: 6379
+  REDIS_DB: 0
+  REDIS_CACHE_DB: 1
+
+  REDIS_QUEUE_HOST: redis-queue
+  REDIS_QUEUE_PASSWORD: "${REDIS_QUEUE_PASSWORD:-null}"
+  REDIS_QUEUE_PORT: 6379
+  REDIS_QUEUE_DB: 0
+  REDIS_QUEUE_CONNECTION: queue
+
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: redis
+  SESSION_LIFETIME: 120
+
+  MIDTRANS_MERCHANT_ID: "${MIDTRANS_MERCHANT_ID}"
+  MIDTRANS_SERVER_KEY: "${MIDTRANS_SERVER_KEY}"
+  MIDTRANS_CLIENT_KEY: "${MIDTRANS_CLIENT_KEY}"
+  MIDTRANS_IS_PRODUCTION: "${MIDTRANS_IS_PRODUCTION:-false}"
+
+  TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
+  TELEGRAM_BOT_USERNAME: "${TELEGRAM_BOT_USERNAME}"
+
+  MAIL_MAILER: "${MAIL_MAILER:-smtp}"
+  MAIL_HOST: "${MAIL_HOST}"
+  MAIL_PORT: "${MAIL_PORT:-587}"
+  MAIL_USERNAME: "${MAIL_USERNAME}"
+  MAIL_PASSWORD: "${MAIL_PASSWORD}"
+  MAIL_ENCRYPTION: "${MAIL_ENCRYPTION:-tls}"
+  MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS}"
+  MAIL_FROM_NAME: "${APP_NAME:-Store TDR HPZ}"
+
+x-app-volumes: &app-volumes
+  - app-storage:/var/www/html/storage
+  - ./bootstrap/cache:/var/www/html/bootstrap/cache
+
+services:
+
+  nginx:
+    image: ${DOCKER_USERNAME:-ghufronbagaskara}/tdr-hpz-nginx:${IMAGE_TAG:-latest}
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+    volumes:
+      - app-storage:/var/www/html/storage:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - app-network
+      - monitoring-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  app:
+    image: ${DOCKER_USERNAME:-ghufronbagaskara}/tdr-hpz-app:${IMAGE_TAG:-latest}
+    container_name: app
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    volumes: *app-volumes
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+      redis-queue:
+        condition: service_healthy
+    networks:
+      - app-network
+      - monitoring-network
+
+    healthcheck:
+      test: ["CMD", "php", "-v"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    image: ${DOCKER_USERNAME:-ghufronbagaskara}/tdr-hpz-app:${IMAGE_TAG:-latest}
+    container_name: worker
+    restart: unless-stopped
+    command: >
+      php artisan queue:work redis
+      --queue=high,default,low
+      --tries=3
+      --timeout=90
+      --sleep=3
+      --max-jobs=1000
+      --max-time=3600
+    environment:
+      <<: *app-env
+    volumes: *app-volumes
+    depends_on:
+      app:
+        condition: service_healthy
+      redis-queue:
+        condition: service_healthy
+    networks:
+      - app-network
+      - monitoring-network
+
+  scheduler:
+    image: ${DOCKER_USERNAME:-ghufronbagaskara}/tdr-hpz-app:${IMAGE_TAG:-latest}
+    container_name: scheduler
+    restart: unless-stopped
+    command: >
+      sh -c "while true; do
+      php artisan schedule:run --no-interaction >> /var/www/html/storage/logs/scheduler.log 2>&1;
+      sleep 60;
+      done"
+    environment:
+      <<: *app-env
+    volumes: *app-volumes
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    networks:
+      - app-network
+      - monitoring-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${DB_ROOT_PASSWORD}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password
+
+  redis-cache:
+    image: redis:7-alpine
+    container_name: redis-cache
+    restart: unless-stopped
+    command: redis-server --maxmemory 96mb --maxmemory-policy allkeys-lru --save ""
+    volumes:
+      - redis-cache-data:/data
+    networks:
+      - app-network
+      - monitoring-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis-queue:
+    image: redis:7-alpine
+    container_name: redis-queue
+    restart: unless-stopped
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis-queue-data:/data
+    ports:
+      - "${REDIS_QUEUE_PORT:-6380}:6379"
+    networks:
+      - app-network
+      - monitoring-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - monitoring-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-changeme}"
+      GF_SERVER_ROOT_URL: "${GRAFANA_ROOT_URL:-http://localhost:3000}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring-network

@@ -8,32 +8,47 @@
         <div class="alert alert-info">{{ session('info') }}</div>
     @endif
 
+    @if(session('payment_pending'))
+    @php $pending = session('payment_pending'); @endphp
+    <div class="alert py-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2"
+         style="background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.35);border-radius:10px;color:var(--tdr-gold)">
+        <div>
+            <i class="bi bi-clock-history me-1"></i>
+            <strong>Pembayaran belum selesai</strong> &mdash; Order <code>{{ $pending['order_number'] }}</code> masih menunggu pembayaran.
+        </div>
+        <a href="{{ $pending['snap_url'] }}" class="btn btn-sm fw-semibold"
+           style="background:var(--tdr-gold);color:#0b0b0f;border-radius:6px;white-space:nowrap">
+            <i class="bi bi-credit-card me-1"></i>Lanjutkan Pembayaran
+        </a>
+    </div>
+    @endif
+
     @if($errors->has('general'))
         <div class="alert alert-danger">{{ $errors->first('general') }}</div>
     @endif
 
-    @if($affiliate)
+    @php
+        $hasAffiliate = collect($affiliates)->filter()->isNotEmpty();
+    @endphp
+    @if($hasAffiliate)
     <div class="alert alert-success py-2 mb-3">
-        <i class="bi bi-tag-fill"></i>
-        Referral dari <strong>{{ $affiliate->user?->name ?? $affiliate->referral_code }}</strong> aktif — komisi 10% otomatis tercatat.
+        <i class="bi bi-tag-fill me-1"></i>
+        Kode referral aktif pada beberapa item — komisi affiliate otomatis tercatat.
     </div>
     @endif
 
     <form method="POST" action="{{ route('checkout.process') }}" id="checkoutForm">
         @csrf
-        <input type="hidden" name="product_id" value="{{ $product->id }}">
 
         <div class="row g-4">
 
-            {{-- ================================================================
-                 KOLOM KIRI — Pengiriman & Data Pembeli
-            ================================================================ --}}
+            {{-- LEFT COLUMN --}}
             <div class="col-lg-7">
 
-                {{-- 1. Alamat Pengiriman --}}
+                {{-- Shipping Address --}}
                 <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-white fw-bold border-bottom py-3">
-                        <i class="bi bi-geo-alt text-primary me-1"></i> Alamat Pengiriman
+                    <div class="card-header fw-bold py-3">
+                        <i class="bi bi-geo-alt me-1" style="color:var(--tdr-red)"></i> Alamat Pengiriman
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-3">
@@ -94,15 +109,15 @@
                     </div>
                 </div>
 
-                {{-- 2. Pilih Ekspedisi --}}
+                {{-- Courier Selection --}}
                 <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-white fw-bold border-bottom py-3">
-                        <i class="bi bi-truck text-primary me-1"></i> Pilih Ekspedisi
+                    <div class="card-header fw-bold py-3">
+                        <i class="bi bi-truck me-1" style="color:var(--tdr-red)"></i> Pilih Ekspedisi
                     </div>
                     <div class="card-body p-3">
                         @foreach($couriers as $key => $courier)
-                        <label class="courier-option d-flex align-items-center gap-3 p-3 rounded mb-2 border cursor-pointer {{ old('shipping_courier') === $key ? 'border-primary bg-light' : '' }}"
-                               for="courier_{{ $key }}" style="cursor:pointer">
+                        <label class="courier-option d-flex align-items-center gap-3 p-3 rounded-3 mb-2 {{ old('shipping_courier') === $key ? 'selected' : '' }}"
+                               for="courier_{{ $key }}" style="cursor:pointer;border:1px solid var(--tdr-border);transition:all .15s ease">
                             <input type="radio" name="shipping_courier" id="courier_{{ $key }}"
                                    value="{{ $key }}"
                                    data-cost="{{ $courier['cost'] }}"
@@ -112,7 +127,7 @@
                             <div class="flex-grow-1">
                                 <div class="fw-semibold small">{{ $courier['label'] }}</div>
                             </div>
-                            <div class="text-end fw-bold text-primary small">
+                            <div class="text-end fw-bold small" style="color:var(--tdr-red)">
                                 {{ $courier['cost'] > 0 ? 'Rp ' . number_format($courier['cost'], 0, ',', '.') : 'GRATIS' }}
                             </div>
                         </label>
@@ -121,67 +136,82 @@
                     </div>
                 </div>
 
-                {{-- 3. Catatan (opsional) --}}
+                {{-- Notes --}}
                 <div class="card shadow-sm">
-                    <div class="card-header bg-white fw-bold border-bottom py-3">
-                        <i class="bi bi-chat-left-text text-secondary me-1"></i> Catatan <span class="fw-normal text-muted">(opsional)</span>
+                    <div class="card-header fw-bold py-3">
+                        <i class="bi bi-chat-left-text me-1" style="color:var(--tdr-muted)"></i> Catatan <span class="fw-normal text-muted">(opsional)</span>
                     </div>
                     <div class="card-body p-4">
-                        <textarea name="note" rows="2" class="form-control"
+                        <textarea name="notes" rows="2" class="form-control"
                                   placeholder="Catatan untuk penjual, misal: warna pilihan, ukuran, dll">{{ old('note') }}</textarea>
                     </div>
                 </div>
 
-            </div>{{-- end col-kiri --}}
+            </div>
 
-            {{-- ================================================================
-                 KOLOM KANAN — Ringkasan Pesanan
-            ================================================================ --}}
+            {{-- RIGHT COLUMN --}}
             <div class="col-lg-5">
                 <div class="card shadow-sm sticky-top" style="top: 16px">
-                    <div class="card-header bg-white fw-bold border-bottom py-3">
-                        <i class="bi bi-bag-check text-primary me-1"></i> Ringkasan Pesanan
+                    <div class="card-header fw-bold py-3 d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-bag-check me-1" style="color:var(--tdr-red)"></i> Ringkasan Pesanan</span>
+                        <a href="{{ route('cart.index') }}" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem">
+                            <i class="bi bi-pencil me-1"></i>Edit
+                        </a>
                     </div>
                     <div class="card-body p-4">
 
-                        {{-- Produk --}}
-                        <div class="d-flex gap-3 mb-4">
-                            @if($product->image_url)
-                                <img src="{{ $product->image_url }}" class="rounded"
-                                     style="width:64px;height:64px;object-fit:cover" alt="{{ $product->name }}">
-                            @else
-                                <div class="bg-light rounded d-flex align-items-center justify-content-center flex-shrink-0"
-                                     style="width:64px;height:64px;font-size:1.8rem">🏍</div>
-                            @endif
-                            <div class="flex-grow-1">
-                                <div class="fw-semibold">{{ $product->name }}</div>
-                                <div class="text-muted small">Rp {{ number_format($product->price, 0, ',', '.') }} / pcs</div>
-                                @if($product->stock !== null && $product->stock <= 10 && $product->stock > 0)
-                                    <div class="text-warning small">Stok tersisa {{ $product->stock }}</div>
+                        {{-- Cart items --}}
+                        @php $cartSubtotal = 0; @endphp
+                        @foreach($cart as $productId => $item)
+                        @php
+                            $lineTotal = $item['product_price'] * $item['quantity'];
+                            $cartSubtotal += $lineTotal;
+                            $itemAffiliate = $affiliates[$productId] ?? null;
+                        @endphp
+                        <div class="d-flex gap-3 mb-3 pb-3" style="border-bottom:1px solid var(--tdr-border)">
+                            {{-- Thumbnail --}}
+                            <div class="flex-shrink-0 rounded d-flex align-items-center justify-content-center overflow-hidden"
+                                 style="width:48px;height:48px;background:rgba(255,255,255,0.04)">
+                                @if($item['thumbnail_url'] ?? null)
+                                    <img src="{{ $item['thumbnail_url'] }}" style="width:100%;height:100%;object-fit:cover" alt="">
+                                @else
+                                    <i class="bi bi-box-seam" style="color:var(--tdr-muted)"></i>
                                 @endif
                             </div>
-                        </div>
-
-                        {{-- Qty Stepper --}}
-                        <div class="d-flex align-items-center justify-content-between mb-4">
-                            <span class="small fw-semibold text-muted">Jumlah</span>
-                            <div class="input-group" style="width:130px">
-                                <button type="button" class="btn btn-outline-secondary" id="btnMinus">−</button>
-                                <input type="number" name="qty" id="qtyInput"
-                                       class="form-control text-center"
-                                       value="{{ old('qty', $qty) }}" min="1"
-                                       max="{{ $product->stock ?? 99 }}" required>
-                                <button type="button" class="btn btn-outline-secondary" id="btnPlus">+</button>
+                            {{-- Info --}}
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold" style="font-size:.82rem">{{ $item['product_name'] }}</div>
+                                <div class="text-muted" style="font-size:.75rem">
+                                    {{ $item['quantity'] }} × Rp {{ number_format($item['product_price'], 0, ',', '.') }}
+                                </div>
+                                @if($itemAffiliate)
+                                <div class="mt-1">
+                                    <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:20px;font-size:.68rem;font-weight:600;background:rgba(212,168,67,.12);color:var(--tdr-gold);border:1px solid rgba(212,168,67,.2)">
+                                        <i class="bi bi-tag"></i>
+                                        Ref: {{ $item['affiliate_code'] }}
+                                        ({{ $itemAffiliate->user?->name ?? '' }})
+                                    </span>
+                                </div>
+                                @elseif(! empty($item['affiliate_code']))
+                                <div class="mt-1">
+                                    <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:20px;font-size:.68rem;font-weight:600;background:rgba(212,168,67,.12);color:var(--tdr-gold);border:1px solid rgba(212,168,67,.2)">
+                                        <i class="bi bi-tag"></i>Ref: {{ $item['affiliate_code'] }}
+                                    </span>
+                                </div>
+                                @endif
+                            </div>
+                            {{-- Line total --}}
+                            <div class="text-end fw-semibold flex-shrink-0" style="font-size:.82rem;color:var(--tdr-gold)">
+                                Rp {{ number_format($lineTotal, 0, ',', '.') }}
                             </div>
                         </div>
+                        @endforeach
 
-                        <hr>
-
-                        {{-- Rincian Harga --}}
+                        {{-- Subtotal --}}
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="small text-muted">Subtotal</span>
+                            <span class="small text-muted">Subtotal ({{ count($cart) }} item)</span>
                             <span class="small fw-semibold" id="subtotalDisplay">
-                                Rp {{ number_format((float)$product->price * $qty, 0, ',', '.') }}
+                                Rp {{ number_format($cartSubtotal, 0, ',', '.') }}
                             </span>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
@@ -195,8 +225,8 @@
 
                         <div class="d-flex justify-content-between mb-4">
                             <span class="fw-bold">Total Bayar</span>
-                            <span class="fs-5 fw-bold text-danger" id="totalDisplay">
-                                Rp {{ number_format((float)$product->price * $qty + 15000, 0, ',', '.') }}
+                            <span class="fs-5 fw-bold" style="color:var(--tdr-red)" id="totalDisplay">
+                                Rp {{ number_format($cartSubtotal + 15000, 0, ',', '.') }}
                             </span>
                         </div>
 
@@ -206,23 +236,33 @@
 
                         <div class="text-center mt-2">
                             <small class="text-muted">
-                                <i class="bi bi-shield-check text-success"></i>
+                                <i class="bi bi-shield-check me-1" style="color:#5dd39e"></i>
                                 Transaksi aman & terenkripsi via Midtrans
                             </small>
                         </div>
 
                     </div>
                 </div>
-            </div>{{-- end col-kanan --}}
+            </div>
 
-        </div>{{-- end row --}}
+        </div>
     </form>
 </div>
 @endsection
 
+@push('styles')
+<style>
+.courier-option.selected,
+.courier-option:has(input:checked) {
+    border-color: var(--tdr-red) !important;
+    background: rgba(230,57,70,0.05);
+}
+</style>
+@endpush
+
 @push('scripts')
 <script>
-const productPrice = {{ (int) round((float) $product->price) }};
+const cartSubtotal = {{ (int) round(collect($cart)->sum(fn($i) => $i['product_price'] * $i['quantity'])) }};
 const couriers = @json(collect($couriers)->map(fn($c) => $c['cost']));
 let currentShippingCost = couriers['jne_reg'] ?? 15000;
 
@@ -231,34 +271,18 @@ function fmt(n) {
 }
 
 function recalc() {
-    const qty = parseInt(document.getElementById('qtyInput').value) || 1;
-    const subtotal = productPrice * qty;
-    const total = subtotal + currentShippingCost;
-    document.getElementById('subtotalDisplay').textContent = fmt(subtotal);
+    const total = cartSubtotal + currentShippingCost;
     document.getElementById('shippingDisplay').textContent = fmt(currentShippingCost);
     document.getElementById('totalDisplay').textContent = fmt(total);
 }
-
-// Qty stepper
-document.getElementById('btnMinus').addEventListener('click', function () {
-    const inp = document.getElementById('qtyInput');
-    if (parseInt(inp.value) > 1) { inp.value = parseInt(inp.value) - 1; recalc(); }
-});
-document.getElementById('btnPlus').addEventListener('click', function () {
-    const inp = document.getElementById('qtyInput');
-    const max = parseInt(inp.max) || 99;
-    if (parseInt(inp.value) < max) { inp.value = parseInt(inp.value) + 1; recalc(); }
-});
-document.getElementById('qtyInput').addEventListener('input', recalc);
 
 // Courier selection
 document.querySelectorAll('input[name="shipping_courier"]').forEach(function (radio) {
     radio.addEventListener('change', function () {
         currentShippingCost = parseInt(this.dataset.cost) || 0;
         recalc();
-        // Highlight selected
-        document.querySelectorAll('.courier-option').forEach(el => el.classList.remove('border-primary', 'bg-light'));
-        this.closest('.courier-option').classList.add('border-primary', 'bg-light');
+        document.querySelectorAll('.courier-option').forEach(el => el.classList.remove('selected'));
+        this.closest('.courier-option').classList.add('selected');
     });
 });
 
@@ -266,4 +290,3 @@ document.querySelectorAll('input[name="shipping_courier"]').forEach(function (ra
 recalc();
 </script>
 @endpush
-
