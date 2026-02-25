@@ -17,10 +17,8 @@ class TelegramService
     }
 
     /**
-     * Send a Markdown message to a Telegram chat.
-     *
-     * @param  string  $chatId   Telegram chat_id penerima
-     * @param  string  $message  Pesan yang akan dikirim (plain / Markdown)
+     * @param  string  $chatId  
+     * @param  string  $message  
      * @return bool
      */
     public function sendMessage(string $chatId, string $message): bool

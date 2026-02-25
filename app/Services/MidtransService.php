@@ -19,11 +19,7 @@ class MidtransService
             : 'https://app.sandbox.midtrans.com/snap/v1';
     }
 
-    /**
-     * Validate Midtrans webhook signature.
-     *
-     * Formula: SHA512(order_id + status_code + gross_amount + server_key)
-     */
+
     public function isValidSignature(array $payload): bool
     {
         $orderId     = $payload['order_id'] ?? '';
@@ -36,11 +32,32 @@ class MidtransService
         return hash_equals($expected, $signature);
     }
 
+    public function getTransactionStatus(string $orderId): ?array
+    {
+        $baseUrl = $this->isProduction
+            ? 'https://api.midtrans.com/v2'
+            : 'https://api.sandbox.midtrans.com/v2';
+
+        try {
+            $response = Http::withBasicAuth($this->serverKey, '')
+                ->get("{$baseUrl}/{$orderId}/status");
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('MidtransService::getTransactionStatus error', [
+                'order_id' => $orderId,
+                'error'    => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
     /**
-     * Create a Midtrans Snap payment token and return the redirect_url.
-     *
-     * @param  array  $params  Midtrans transaction params
-     * @return string  Redirect URL to Midtrans payment page
+     * @param  array  $params  
+     * @return string  
      * @throws \RuntimeException
      */
     public function createSnapToken(array $params): string

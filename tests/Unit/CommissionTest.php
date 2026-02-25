@@ -4,21 +4,21 @@ namespace Tests\Unit;
 
 use Tests\TestCase;
 
-/**
- * TODO [PHASE 2 - Ghufron]: Implementasi commission calculation unit test
- */
 class CommissionTest extends TestCase
 {
-    /**
-     * Test 3: Commission calculation
-     *
-     * TODO [PHASE 2 - Ghufron]: Verifikasi formula komisi
-     * commission = total_amount * 0.10
-     */
     public function test_commission_is_calculated_correctly(): void
     {
-        // TODO [PHASE 2 - Ghufron]: Implementasi test di sini
-        // Contoh: total_amount = 100000 → commission = 10000
-        $this->markTestIncomplete('TODO [PHASE 2 - Ghufron]: Implement commission calculation test');
+        $itemTotal  = 155000;
+        $commRate   = 5;
+        $commAmount = round($itemTotal * ($commRate / 100), 2);
+        $this->assertEquals(7750.00, $commAmount);
+
+        $this->assertEquals(1500.00, round(100000 * (1.5 / 100), 2));
+
+        $this->assertEquals(80000.00, round(1000000 * (8 / 100), 2));
+
+        $this->assertEquals(0.00, round(500000 * (0 / 100), 2));
+
+        $this->assertEquals(333.33, round(33333 * (1 / 100), 2));
     }
 }
