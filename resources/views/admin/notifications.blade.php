@@ -7,7 +7,7 @@
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="table-light">
+            <thead>
                 <tr>
                     <th>ID</th>
                     <th>Penerima</th>
@@ -21,18 +21,24 @@
             @forelse($notifications as $n)
                 <tr>
                     <td class="text-muted small">#{{ $n->id }}</td>
-                    <td>{{ $n->user?->name ?? $n->recipient ?? '—' }}</td>
+                    <td>{{ $n->user?->name ?? $n->recipient ?? '--' }}</td>
                     <td>
                         @if($n->order)
                             <a href="{{ route('admin.orders.show', $n->order) }}">#{{ $n->order->order_number }}</a>
-                        @else —
+                        @else --
                         @endif
                     </td>
-                    <td><span class="badge bg-secondary">{{ $n->message_type }}</span></td>
+                    <td><span class="badge" style="background:rgba(107,114,128,0.15);color:#9ca3af">{{ $n->message_type }}</span></td>
                     <td>
-                        <span class="badge bg-{{ match($n->status) {
-                            'sent'=>'success','failed'=>'danger','queued'=>'warning text-dark',default=>'secondary'
-                        } }}">{{ $n->status }}</span>
+                        @php
+                            $nStyle = match($n->status) {
+                                'sent'   => ['rgba(16,185,129,0.15)', '#34d399'],
+                                'failed' => ['rgba(230,57,70,0.15)', '#ff6b7a'],
+                                'queued' => ['rgba(245,158,11,0.15)', '#fbbf24'],
+                                default  => ['rgba(107,114,128,0.15)', '#9ca3af'],
+                            };
+                        @endphp
+                        <span class="badge" style="background:{{ $nStyle[0] }};color:{{ $nStyle[1] }}">{{ $n->status }}</span>
                     </td>
                     <td class="text-muted small">
                         {{ $n->sent_at?->format('d/m H:i') ?? $n->created_at->format('d/m H:i') }}
