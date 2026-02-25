@@ -59,6 +59,7 @@ Route::prefix('affiliate')->name('affiliate.')->group(function () {
 });
 
 // Admin
+Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login',  [AdminController::class, 'showLogin'])->name('login');
     Route::post('/login', [AdminController::class, 'login'])->name('login.post');
 
@@ -76,6 +77,7 @@ Route::prefix('affiliate')->name('affiliate.')->group(function () {
         Route::post('/affiliates/{affiliate}/reject',  [AdminController::class, 'rejectAffiliate'])->name('affiliates.reject');
         Route::get('/notifications',         [AdminController::class, 'notifications'])->name('notifications');
     });
+});
 
 // ---------------------------------------------------------------------------
 // Webhook — lihat routes/api.php (POST /api/webhook/payment)
