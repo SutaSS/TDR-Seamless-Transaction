@@ -111,6 +111,46 @@ class NotificationService
     }
 
     /**
+     * Notify affiliate that their commission balance was credited (order completed).
+     */
+    public function notifyAffiliateBalanceCredited(Order $order): void
+    {
+        if (! $order->affiliate_id) return;
+
+        $affiliate = $order->affiliate; // User model
+        $chatId    = $affiliate?->telegram_chat_id;
+        if (! $chatId) return;
+
+        $commission = \App\Models\AffiliateCommission::where('order_id', $order->id)
+            ->where('affiliate_id', $order->affiliate_id)
+            ->first();
+        if (! $commission) return;
+
+        $name    = $affiliate->name;
+        $ordNum  = $order->order_number;
+        $amount  = 'Rp ' . number_format((float) $commission->amount, 0, ',', '.');
+        $date    = \Illuminate\Support\Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+
+        $message = "*TDR-HPZ Affiliate* 💰\n\n"
+                 . "Halo *{$name}*!\n\n"
+                 . "Pesanan *{$ordNum}* telah selesai.\n"
+                 . "Komisi sebesar *{$amount}* sudah masuk ke saldo Anda.\n\n"
+                 . "⏰ {$date}";
+
+        $notification = NotificationLog::create([
+            'user_id'         => $affiliate->id,
+            'order_id'        => $order->id,
+            'message_type'    => 'affiliate.balance_credited',
+            'channel'         => 'telegram',
+            'recipient'       => $chatId,
+            'message_content' => $message,
+            'status'          => 'queued',
+        ]);
+
+        SendTelegramNotification::dispatch($notification->id);
+    }
+
+    /**
      * Notify an affiliate when their account is approved by admin.
      */
     public function notifyAffiliateApproved(\App\Models\AffiliateProfile $profile): void

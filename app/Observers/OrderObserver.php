@@ -31,6 +31,11 @@ class OrderObserver
             if ($event) {
                 $this->notif->notifyOrderStatus($order, $event);
             }
+
+            // When order auto-completes, notify affiliate their balance was credited
+            if ($order->status === 'completed') {
+                $this->notif->notifyAffiliateBalanceCredited($order);
+            }
         }
     }
 }

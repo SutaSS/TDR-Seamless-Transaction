@@ -150,7 +150,8 @@ class AdminController extends Controller
             }
         }
 
-        $order->update($updates);
+        // Suppress observer so notification fires once (explicit call below, with note)
+        Order::withoutObservers(fn () => $order->update($updates));
 
         TrackingLog::create([
             'order_id'     => $order->id,
@@ -158,7 +159,6 @@ class AdminController extends Controller
             'description'  => $data['note'] ?? null,
         ]);
 
-        // Send notification
         $event = match($data['status']) {
             'processing' => 'order.processing',
             'shipped'    => 'order.shipped',
@@ -168,6 +168,11 @@ class AdminController extends Controller
 
         if ($event) {
             $this->notificationService->notifyOrderStatus($order->fresh(), $event, $data['note'] ?? null);
+        }
+
+        // On manual complete, also notify affiliate balance credited
+        if ($data['status'] === 'completed') {
+            $this->notificationService->notifyAffiliateBalanceCredited($order->fresh());
         }
 
         return back()->with('success', 'Status pesanan berhasil diperbarui.');
