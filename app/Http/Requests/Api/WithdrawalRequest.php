@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class WithdrawalRequest extends FormRequest
 {
-    /** Hanya afiliasi aktif yang bisa menarik dana (difilter lagi di controller). */
+    
     public function authorize(): bool
     {
         return $this->user() !== null && $this->user()->role === 'affiliate';

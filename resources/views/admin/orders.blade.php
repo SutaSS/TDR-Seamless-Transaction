@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold mb-0">Daftar Pesanan</h4>
     <form class="d-flex gap-2" method="GET">
-        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+        <select name="status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
             <option value="">Semua Status</option>
             @foreach(['pending','processing','shipped','delivered','cancelled'] as $st)
                 <option value="{{ $st }}" @selected(request('status') === $st)>{{ ucfirst($st) }}</option>
@@ -17,7 +17,7 @@
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead class="table-light">
+            <thead>
                 <tr>
                     <th>No. Pesanan</th>
                     <th>Pelanggan</th>
@@ -36,25 +36,17 @@
                     <td>{{ $order->customer?->name ?? '-' }}</td>
                     <td>
                         @if($order->affiliate)
-                            <span class="badge bg-info text-dark">{{ $order->affiliate->affiliateProfile?->referral_code ?? '-' }}</span>
+                            <span class="badge" style="background:rgba(6,182,212,0.15);color:#22d3ee">{{ $order->affiliate->affiliateProfile?->referral_code ?? '-' }}</span>
                         @else
                             <span class="text-muted">-</span>
                         @endif
                     </td>
                     <td>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</td>
                     <td>
-                        <span class="badge bg-{{ match($order->status) {
-                            'pending'    => 'warning text-dark',
-                            'verified'   => 'primary',
-                            'processing' => 'purple',
-                            'shipped'    => 'info text-dark',
-                            'completed'  => 'success',
-                            'cancelled'  => 'secondary',
-                            default      => 'secondary'
-                        } }}">{{ $order->status }}</span>
+                        <span class="badge badge-{{ $order->status }}">{{ $order->status }}</span>
                     </td>
                     <td>
-                        <span class="badge bg-{{ $order->payment_verified_at ? 'success' : 'secondary' }}">
+                        <span class="badge {{ $order->payment_verified_at ? 'badge-paid' : 'badge-cancelled' }}">
                             {{ $order->payment_verified_at ? 'paid' : 'unpaid' }}
                         </span>
                     </td>

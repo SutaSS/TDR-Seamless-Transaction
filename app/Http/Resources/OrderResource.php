@@ -37,7 +37,7 @@ class OrderResource extends JsonResource
             'created_at'                => $this->created_at?->toISOString(),
             'updated_at'                => $this->updated_at?->toISOString(),
 
-            // Relasi (hanya disertakan jika sudah di-load)
+            // Relasi
             'customer' => $this->when(
                 $this->relationLoaded('customer'),
                 fn () => new UserResource($this->customer)

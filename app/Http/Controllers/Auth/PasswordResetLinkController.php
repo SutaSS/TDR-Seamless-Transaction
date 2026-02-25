@@ -9,10 +9,6 @@ use Illuminate\Support\Facades\Password;
 
 class PasswordResetLinkController extends Controller
 {
-    /**
-     * Send a password reset link to the given user.
-     * POST /api/forgot-password
-     */
     public function store(Request $request): JsonResponse
     {
         $request->validate([

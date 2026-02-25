@@ -12,10 +12,6 @@ use Illuminate\Support\Str;
 
 class NewPasswordController extends Controller
 {
-    /**
-     * Reset the password for a user.
-     * POST /api/reset-password
-     */
     public function store(Request $request): JsonResponse
     {
         $request->validate([

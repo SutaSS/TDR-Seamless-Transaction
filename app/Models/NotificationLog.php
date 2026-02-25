@@ -7,9 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NotificationLog extends Model
 {
-    /**
-     * Kolom sesuai migrasi: notification_logs table.
-     */
     protected $fillable = [
         'order_id',
         'user_id',
@@ -26,21 +23,19 @@ class NotificationLog extends Model
         'sent_at' => 'datetime',
     ];
 
-    // ──────────────────────── Relations ────────────────────────
+    //Relations
 
-    /** Pesanan terkait notifikasi ini (nullable). */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
-    /** User penerima notifikasi (nullable). */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // ──────────────────────── Scopes ──────────────────────────
+    // Scopes
 
     public function scopeSent($query)
     {

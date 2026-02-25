@@ -6,7 +6,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class CreateOrderRequest extends FormRequest
 {
-    /** Hanya user yang sudah login yang bisa buat order. */
     public function authorize(): bool
     {
         return $this->user() !== null;
@@ -15,16 +14,16 @@ class CreateOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Alamat pengiriman (satu string panjang sesuai migrasi)
-            'shipping_address'  => ['required', 'string', 'max:1000'],
-            'shipping_courier'  => ['required', 'string', 'max:100'],
-            'notes'             => ['nullable', 'string', 'max:1000'],
-            'payment_method'    => ['required', 'string', 'max:50'],
+            'shipping_address'          => ['required', 'string', 'max:1000'],
+            'shipping_courier'          => ['required', 'string', 'max:100'],
+            'shipping_cost'             => ['nullable', 'numeric', 'min:0'],
+            'notes'                     => ['nullable', 'string', 'max:1000'],
+            'payment_method'            => ['required', 'string', 'max:50'],
 
-            // Item pesanan
-            'items'             => ['required', 'array', 'min:1'],
-            'items.*.product_id'=> ['required', 'integer', 'exists:products,id'],
-            'items.*.quantity'  => ['required', 'integer', 'min:1', 'max:999'],
+            'items'                     => ['required', 'array', 'min:1'],
+            'items.*.product_id'        => ['required', 'integer', 'exists:products,id'],
+            'items.*.quantity'          => ['required', 'integer', 'min:1', 'max:999'],
+            'items.*.affiliate_code'    => ['nullable', 'string', 'max:20'],
         ];
     }
 

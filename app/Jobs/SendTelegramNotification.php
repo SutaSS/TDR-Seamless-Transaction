@@ -13,16 +13,11 @@ class SendTelegramNotification implements ShouldQueue
 {
     use Queueable, InteractsWithQueue;
 
-    /**
-     * Max retry attempts (0-indexed: 0, 1, 2 = 3 attempts total).
-     */
     public int $tries = 3;
 
     public function __construct(public int $notificationId) {}
 
-    /**
-     * Execute the job.
-     */
+
     public function handle(TelegramService $telegram): void
     {
         $notification = NotificationLog::find($this->notificationId);
@@ -32,15 +27,13 @@ class SendTelegramNotification implements ShouldQueue
             return;
         }
 
-        // Sudah dikirim sebelumnya (idempotency)
         if ($notification->status === 'sent') {
             return;
         }
 
-        // Resolve chat_id dari user terkait
-        $chatId = null;
+        $chatId = $notification->recipient;
 
-        if ($notification->user_id) {
+        if (empty($chatId) && $notification->user_id) {
             $chatId = $notification->user?->telegram_chat_id;
         }
 

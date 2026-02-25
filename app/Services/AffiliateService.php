@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class AffiliateService
 {
-    /**
-     * Record a pending affiliate commission for an order.
-     */
+
     public function recordCommission(Order $order): ?AffiliateCommission
     {
         if (! $order->affiliate_id) {
@@ -26,21 +24,19 @@ class AffiliateService
             return null;
         }
 
-        $rate   = $affiliateProfile->commission_rate;
-        $amount = round($order->subtotal * ($rate / 100), 2);
+        $amount = (float) $order->commission_amount > 0
+            ? (float) $order->commission_amount
+            : round((float) $order->subtotal * ($affiliateProfile->commission_rate / 100), 2);
 
         return AffiliateCommission::create([
             'order_id'        => $order->id,
             'affiliate_id'    => $order->affiliate_id,
             'amount'          => $amount,
-            'commission_rate' => $rate,
+            'commission_rate' => $affiliateProfile->commission_rate,
             'status'          => 'pending',
         ]);
     }
 
-    /**
-     * Mark a commission as earned and credit the affiliate's balance.
-     */
     public function earnCommission(AffiliateCommission $commission): void
     {
         DB::transaction(function () use ($commission) {

@@ -8,7 +8,7 @@ class LoginRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // autentikasi diverifikasi di controller
+        return true;
     }
 
     public function rules(): array

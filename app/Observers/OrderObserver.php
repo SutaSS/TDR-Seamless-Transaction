@@ -9,17 +9,8 @@ class OrderObserver
 {
     public function __construct(protected NotificationService $notif) {}
 
-    /**
-     * Called after an order is updated. Detect status transitions and fire notifications.
-     */
     public function updated(Order $order): void
     {
-        // payment_verified_at berubah dari null → terisi → berarti baru dibayar
-        if ($order->wasChanged('payment_verified_at') && $order->payment_verified_at !== null) {
-            $this->notif->notifyOrderStatus($order, 'payment.confirmed');
-        }
-
-        // status berubah → kirim notifikasi event yang sesuai
         if ($order->wasChanged('status')) {
             $event = match ($order->status) {
                 'processing' => 'order.processing',
@@ -31,6 +22,10 @@ class OrderObserver
 
             if ($event) {
                 $this->notif->notifyOrderStatus($order, $event);
+            }
+
+            if ($order->status === 'completed') {
+                $this->notif->notifyAffiliateBalanceCredited($order);
             }
         }
     }
