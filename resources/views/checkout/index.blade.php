@@ -127,7 +127,7 @@
                         <i class="bi bi-chat-left-text text-secondary me-1"></i> Catatan <span class="fw-normal text-muted">(opsional)</span>
                     </div>
                     <div class="card-body p-4">
-                        <textarea name="note" rows="2" class="form-control"
+                        <textarea name="notes" rows="2" class="form-control"
                                   placeholder="Catatan untuk penjual, misal: warna pilihan, ukuran, dll">{{ old('note') }}</textarea>
                     </div>
                 </div>
@@ -146,8 +146,8 @@
 
                         {{-- Produk --}}
                         <div class="d-flex gap-3 mb-4">
-                            @if($product->image_url)
-                                <img src="{{ $product->image_url }}" class="rounded"
+                            @if($product->thumbnail_url)
+                                <img src="{{ $product->thumbnail_url }}" class="rounded"
                                      style="width:64px;height:64px;object-fit:cover" alt="{{ $product->name }}">
                             @else
                                 <div class="bg-light rounded d-flex align-items-center justify-content-center flex-shrink-0"

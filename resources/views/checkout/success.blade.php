@@ -15,7 +15,7 @@
                     <div><strong>No. Pesanan:</strong> #{{ $order->order_number }}</div>
                     <div><strong>Total:</strong> Rp {{ number_format($order->total_amount, 0, ',', '.') }}</div>
                     <div><strong>Status:</strong>
-                        <span class="badge bg-primary">{{ $order->order_status }}</span>
+                        <span class="badge bg-primary">{{ $order->status }}</span>
                     </div>
                 </div>
                 <div class="alert alert-info text-start">

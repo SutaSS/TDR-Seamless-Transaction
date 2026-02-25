@@ -20,18 +20,11 @@
                         @csrf
                         @method('PUT')
                         <div class="row g-3">
-                            <div class="col-md-6">
+                        <div class="col-12">
                                 <label class="form-label fw-semibold">Nama Lengkap</label>
                                 <input type="text" name="name" value="{{ old('name', $user->name) }}"
                                        class="form-control @error('name') is-invalid @enderror" required>
                                 @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Nomor HP</label>
-                                <input type="text" name="phone" value="{{ old('phone', $user->phone) }}"
-                                       class="form-control @error('phone') is-invalid @enderror"
-                                       placeholder="08xxxxxxxxxx">
-                                @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Email</label>

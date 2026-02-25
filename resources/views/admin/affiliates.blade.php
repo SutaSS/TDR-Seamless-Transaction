@@ -12,7 +12,7 @@
 {{-- Filter Status --}}
 <form method="GET" class="mb-3 d-flex gap-2 align-items-center">
     <label class="fw-semibold small mb-0">Filter:</label>
-    @foreach([''=>'Semua', 'pending'=>'Pending', 'approved'=>'Approved', 'rejected'=>'Rejected'] as $val => $label)
+    @foreach([''=>'Semua', 'pending'=>'Pending', 'active'=>'Active', 'suspended'=>'Suspended'] as $val => $label)
         <a href="{{ route('admin.affiliates') }}{{ $val ? '?status='.$val : '' }}"
            class="btn btn-sm {{ request('status', '') === $val ? 'btn-dark' : 'btn-outline-secondary' }}">
            {{ $label }}
@@ -39,26 +39,23 @@
             @forelse($affiliates as $aff)
                 @php
                     $statusColor = match($aff->status) {
-                        'approved' => 'bg-success',
-                        'pending'  => 'bg-warning text-dark',
-                        'rejected' => 'bg-danger',
-                        default    => 'bg-secondary',
+                        'active'    => 'bg-success',
+                        'pending'   => 'bg-warning text-dark',
+                        'suspended' => 'bg-danger',
+                        default     => 'bg-secondary',
                     };
                 @endphp
                 <tr>
                     <td>
                         <div class="fw-semibold">{{ $aff->user?->name ?? '-' }}</div>
                         <small class="text-muted">{{ $aff->user?->email }}</small>
-                        @if($aff->user?->phone)
-                            <div class="text-muted" style="font-size:.75rem">📞 {{ $aff->user->phone }}</div>
-                        @endif
                     </td>
                     <td><code class="text-primary">{{ $aff->referral_code }}</code></td>
                     <td class="small">
-                        @if($aff->payout_account_number)
-                            <div>{{ strtoupper(str_replace('_', ' ', $aff->payout_method ?? '')) }}</div>
-                            <div class="fw-semibold">{{ $aff->payout_account_number }}</div>
-                            <div class="text-muted">a/n {{ $aff->payout_account_name }}</div>
+                        @if($aff->bank_account_number)
+                            <div>{{ strtoupper(str_replace('_', ' ', $aff->bank_name ?? '')) }}</div>
+                            <div class="fw-semibold">{{ $aff->bank_account_number }}</div>
+                            <div class="text-muted">a/n {{ $aff->bank_account_holder }}</div>
                         @else
                             <span class="text-muted">—</span>
                         @endif
@@ -88,7 +85,7 @@
                                     ✗ Tolak
                                 </button>
                             </form>
-                        @elseif($aff->status === 'approved')
+                        @elseif($aff->status === 'active')
                             <form method="POST" action="{{ route('admin.affiliates.reject', $aff) }}" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2"
@@ -96,7 +93,7 @@
                                     Nonaktifkan
                                 </button>
                             </form>
-                        @elseif($aff->status === 'rejected')
+                        @elseif($aff->status === 'suspended')
                             <form method="POST" action="{{ route('admin.affiliates.approve', $aff) }}" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-outline-success btn-sm py-0 px-2">
