@@ -14,9 +14,7 @@ class AutoCompleteOrders implements ShouldQueue
 
     public function __construct() {}
 
-    /**
-     * Auto-complete orders that have been shipped for more than 7 days.
-     */
+    //Auto-complete orders that have been shipped for more than 7 days.
     public function handle(): void
     {
         Order::where('status', 'shipped')

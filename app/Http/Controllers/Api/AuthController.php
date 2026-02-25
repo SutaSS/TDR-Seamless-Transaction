@@ -20,7 +20,7 @@ class AuthController extends Controller
         $data = $request->validated();
 
         if (empty($data['role'])) {
-            $data['role'] = str_ends_with($data['email'], '@tdr.com') ? 'admin' : 'customer';
+            $data['role'] = str_ends_with($data['email'], '@tdr-hpz.com') ? 'admin' : 'customer';
         }
 
         $user = User::create([
@@ -50,6 +50,12 @@ class AuthController extends Controller
 
         if (! $user->is_active) {
             return response()->json(['message' => 'Akun Anda dinonaktifkan.'], 403);
+        }
+
+        // Email @tdr-hpz.com selalu jadi admin (handle akun lama)
+        if (str_ends_with($user->email, '@tdr-hpz.com') && $user->role !== 'admin') {
+            $user->update(['role' => 'admin']);
+            $user->refresh();
         }
 
         $token = $user->createToken('auth-token')->plainTextToken;
