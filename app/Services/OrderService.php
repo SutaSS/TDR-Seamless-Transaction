@@ -19,45 +19,81 @@ class OrderService
     ) {}
 
     /**
-     * Create a new order, attach items, and obtain a Midtrans Snap token.
-     *
-     * @param array $data   Validated payload from CreateOrderRequest
+     * @param array $data   Validated payload
      * @param int   $customerId
      */
     public function createOrder(array $data, int $customerId): Order
     {
         return DB::transaction(function () use ($data, $customerId) {
-            $product  = Product::findOrFail($data['product_id']);
-            $qty      = (int) ($data['quantity'] ?? 1);
-            $subtotal = $product->price * $qty;
 
-            // Resolve affiliate if referral cookie is present
-            $affiliateId      = null;
-            $commissionRate   = 0;
-            $commissionAmount = 0;
-
-            if (! empty($data['affiliate_code'])) {
-                $affiliateProfile = AffiliateProfile::where('referral_code', $data['affiliate_code'])
-                    ->where('status', 'active')
-                    ->first();
-
-                if ($affiliateProfile) {
-                    $affiliateId      = $affiliateProfile->user_id;
-                    $commissionRate   = $affiliateProfile->commission_rate;
-                    $commissionAmount = round($subtotal * ($commissionRate / 100), 2);
-                }
+            if (isset($data['product_id'])) {
+                $rawItems = [[
+                    'product_id'     => $data['product_id'],
+                    'quantity'       => $data['quantity'] ?? 1,
+                    'affiliate_code' => $data['affiliate_code'] ?? null,
+                ]];
+            } else {
+                $rawItems = $data['items'] ?? [];
             }
 
-            $orderNumber = 'TDR-' . strtoupper(Str::random(8));
+            $resolvedItems = [];
+            $subtotal      = 0;
+            $commTotal     = 0;
+            $primaryAffId  = null;
+            $midtransItems = [];
+
+            foreach ($rawItems as $raw) {
+                $product   = Product::findOrFail($raw['product_id']);
+                $qty       = max(1, (int) ($raw['quantity'] ?? 1));
+                $itemTotal = round((float) $product->price * $qty, 2);
+                $subtotal += $itemTotal;
+
+                // Resolve per-item affiliate
+                $affId       = null;
+                $commRate    = 0;
+                $commAmount  = 0;
+                $affCode     = $raw['affiliate_code'] ?? null;
+
+                if (! empty($affCode)) {
+                    $affProfile = AffiliateProfile::where('referral_code', $affCode)
+                        ->where('status', 'active')
+                        ->first();
+
+                    if ($affProfile) {
+                        $affId      = $affProfile->user_id;
+                        $commRate   = $affProfile->commission_rate;
+                        $commAmount = round($itemTotal * ($commRate / 100), 2);
+                        $commTotal += $commAmount;
+
+                        if (! $primaryAffId) {
+                            $primaryAffId = $affId;
+                        }
+                    }
+                }
+
+                $resolvedItems[] = compact('product', 'qty', 'itemTotal', 'affId', 'affCode', 'commAmount');
+
+                $midtransItems[] = [
+                    'id'       => $product->id,
+                    'price'    => (int) $product->price,
+                    'quantity' => $qty,
+                    'name'     => mb_substr($product->name, 0, 50),
+                ];
+            }
+
+            $shippingCost = (float) ($data['shipping_cost'] ?? 0);
+            $totalAmount  = $subtotal + $shippingCost;
+            $orderNumber  = 'TDR-' . strtoupper(Str::random(8));
 
             /** @var Order $order */
             $order = Order::create([
                 'order_number'     => $orderNumber,
                 'customer_id'      => $customerId,
-                'affiliate_id'     => $affiliateId,
+                'affiliate_id'     => $primaryAffId,
                 'subtotal'         => $subtotal,
-                'commission_amount'=> $commissionAmount,
-                'total_amount'     => $subtotal,
+                'commission_amount'=> $commTotal,
+                'shipping_cost'    => $shippingCost,
+                'total_amount'     => $totalAmount,
                 'status'           => 'pending',
                 'payment_method'   => $data['payment_method'] ?? null,
                 'shipping_address' => $data['shipping_address'],
@@ -65,36 +101,48 @@ class OrderService
                 'notes'            => $data['notes'] ?? null,
             ]);
 
-            OrderItem::create([
-                'order_id'      => $order->id,
-                'product_id'    => $product->id,
-                'product_name'  => $product->name,
-                'product_price' => $product->price,
-                'quantity'      => $qty,
-                'subtotal'      => $subtotal,
-            ]);
+            foreach ($resolvedItems as $ri) {
+                OrderItem::create([
+                    'order_id'          => $order->id,
+                    'product_id'        => $ri['product']->id,
+                    'product_name'      => $ri['product']->name,
+                    'product_price'     => $ri['product']->price,
+                    'quantity'          => $ri['qty'],
+                    'subtotal'          => $ri['itemTotal'],
+                    'affiliate_code'    => $ri['affCode'],
+                    'commission_amount' => $ri['commAmount'],
+                ]);
 
-            // Decrement product stock
-            if ($product->stock !== null) {
-                $product->decrement('stock', $qty);
+                if ($ri['product']->stock !== null) {
+                    $ri['product']->decrement('stock', $ri['qty']);
+                }
             }
 
-            // Build Midtrans Snap token
+            if ($shippingCost > 0) {
+                $midtransItems[] = [
+                    'id'       => 'SHIPPING',
+                    'price'    => (int) $shippingCost,
+                    'quantity' => 1,
+                    'name'     => 'Ongkos Kirim (' . $data['shipping_courier'] . ')',
+                ];
+            }
+
+            //Build Midtrans Snap token
             $snapUrl = $this->midtrans->createSnapToken([
                 'transaction_details' => [
                     'order_id'     => $order->order_number,
-                    'gross_amount' => (int) $subtotal,
+                    'gross_amount' => (int) $totalAmount,
                 ],
                 'customer_details' => [
                     'first_name' => $order->customer?->name ?? 'Customer',
                     'email'      => $order->customer?->email ?? '',
                 ],
-                'item_details' => [[
-                    'id'       => $product->id,
-                    'price'    => (int) $product->price,
-                    'quantity' => $qty,
-                    'name'     => mb_substr($product->name, 0, 50),
-                ]],
+                'item_details' => $midtransItems,
+                'callbacks' => [
+                    'finish'   => url('/checkout/success?order_number=' . $order->order_number),
+                    'unfinish' => url('/checkout'),  
+                    'error'    => url('/checkout/failed'),
+                ],
             ]);
 
             $order->update(['midtrans_snap_token' => $snapUrl]);
@@ -109,33 +157,80 @@ class OrderService
         });
     }
 
-    /**
-     * Confirm payment from Midtrans webhook, transition order to verified.
-     */
+    public function checkAndVerifyPayment(Order $order): bool
+    {
+        if ($order->payment_verified_at) {
+            return true; 
+        }
+
+        $result = $this->midtrans->getTransactionStatus($order->order_number);
+
+        if (! $result) {
+            return false;
+        }
+
+        $status      = $result['transaction_status'] ?? '';
+        $fraudStatus = $result['fraud_status'] ?? '';
+        $txId        = $result['transaction_id'] ?? ('MIDTRANS-' . now()->timestamp);
+
+        $isSettled = in_array($status, ['settlement', 'capture'])
+            && ($fraudStatus === 'accept' || $fraudStatus === '');
+
+        if ($isSettled) {
+            $this->verifyPayment($order, $txId);
+            return true;
+        }
+
+        return false;
+    }
+
+
     public function verifyPayment(Order $order, string $transactionId): void
     {
-        DB::transaction(function () use ($order, $transactionId) {
-            $order->update([
+        $commission = null;
+        $processed  = false;
+
+        DB::transaction(function () use ($order, $transactionId, &$commission, &$processed) {
+            $locked = Order::where('id', $order->id)
+                ->whereNull('payment_verified_at')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $locked) {
+                return;
+            }
+
+            $locked->update([
                 'status'                  => 'verified',
                 'midtrans_transaction_id' => $transactionId,
                 'payment_verified_at'     => now(),
             ]);
 
             TrackingLog::create([
-                'order_id'     => $order->id,
+                'order_id'     => $locked->id,
                 'status_title' => 'Pembayaran Dikonfirmasi',
                 'description'  => 'Pembayaran telah diverifikasi via Midtrans.',
             ]);
 
-            // Immediately earn affiliate commission on payment verification
-            if ($order->affiliate_id) {
-                $commission = $this->affiliate->recordCommission($order);
+            if ($locked->affiliate_id) {
+                $commission = $this->affiliate->recordCommission($locked);
                 if ($commission) {
                     $this->affiliate->earnCommission($commission);
                 }
             }
-        });
 
-        $this->notification->notifyOrderStatus($order->fresh(), 'payment.confirmed');
+            $processed = true;
+        });
+        if (! $processed) {
+            return;
+        }
+
+        $freshOrder = $order->fresh();
+
+        $this->notification->notifyOrderStatus($freshOrder, 'payment.confirmed');
+
+        if ($commission) {
+            $this->notification->notifyAffiliateCommission($commission);
+        }
     }
 }

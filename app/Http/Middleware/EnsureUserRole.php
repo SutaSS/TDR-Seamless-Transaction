@@ -8,10 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserRole
 {
-    /**
-     * Verifikasi bahwa user yang login memiliki role yang diizinkan.
-     * Penggunaan: Route::middleware('role:admin') atau Route::middleware('role:admin,affiliate')
-     */
+
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();

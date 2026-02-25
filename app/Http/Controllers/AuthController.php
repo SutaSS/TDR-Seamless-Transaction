@@ -11,13 +11,13 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    /** GET /register */
+    // GET /register 
     public function showRegisterForm(): View
     {
         return view('auth.register');
     }
 
-    /** POST /register */
+    // POST /register 
     public function register(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -27,7 +27,7 @@ class AuthController extends Controller
             'telegram_chat_id' => 'nullable|string|max:100',
         ]);
 
-        $role = str_ends_with($data['email'], '@tdr.com') ? 'admin' : 'customer';
+        $role = str_ends_with($data['email'], '@tdr-hpz.com') ? 'admin' : 'customer';
 
         $user = User::create([
             'name'             => $data['name'],
@@ -39,17 +39,22 @@ class AuthController extends Controller
 
         Auth::login($user);
 
+        if (empty($user->telegram_chat_id)) {
+            return redirect()->route('telegram.setup')
+                ->with('success', 'Akun berhasil dibuat. Selamat datang!');
+        }
+
         return redirect()->intended(route('home'))
             ->with('success', 'Akun berhasil dibuat. Selamat datang!');
     }
 
-    /** GET /login */
+    // GET /login
     public function showLoginForm(): View
     {
         return view('auth.login');
     }
 
-    /** POST /login */
+    // POST /login
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
@@ -62,12 +67,22 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
+            // Email @tdr-hpz.com selalu jadi admin (handle akun lama)
+            if (str_ends_with($user->email, '@tdr-hpz.com') && $user->role !== 'admin') {
+                $user->update(['role' => 'admin']);
+                $user->refresh();
+            }
+
             if ($user->role === 'admin') {
                 return redirect()->route('admin.dashboard');
             }
 
             if ($user->role === 'affiliate') {
                 return redirect()->route('affiliate.dashboard');
+            }
+
+            if (empty($user->telegram_chat_id)) {
+                return redirect()->route('telegram.setup');
             }
 
             return redirect()->intended(route('home'));
@@ -78,13 +93,13 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    /** POST /logout */
+    // POST /logout 
     public function logout(Request $request): RedirectResponse
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route('home');
     }
 }

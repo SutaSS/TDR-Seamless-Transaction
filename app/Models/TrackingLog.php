@@ -7,10 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TrackingLog extends Model
 {
-    /**
-     * Kolom sesuai migrasi: tracking_logs table.
-     * Tabel hanya punya created_at (bukan updated_at).
-     */
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -23,9 +20,7 @@ class TrackingLog extends Model
         'created_at' => 'datetime',
     ];
 
-    // ──────────────────────── Relations ────────────────────────
-
-    /** Pesanan yang terkait dengan log ini. */
+    // Relations
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

@@ -10,10 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class TrackAffiliateClick
 {
-    /**
-     * Tangkap parameter ?ref=CODE, simpan ke cookie, dan catat klik secara async.
-     * Middleware ini dipasang di route homepage / halaman produk.
-     */
+
     public function handle(Request $request, Closure $next): Response
     {
         $refCode = $request->query('ref') ?? $request->cookie('ref_code');
@@ -24,7 +21,6 @@ class TrackAffiliateClick
                 ->first();
 
             if ($profile) {
-                // Catat klik secara async (non-blocking)
                 ProcessAffiliateClick::dispatch(
                     $profile->user_id,
                     $request->ip(),
@@ -32,7 +28,6 @@ class TrackAffiliateClick
                     $request->headers->get('referer') ?? ''
                 );
 
-                // Simpan ref_code di cookie (30 hari)
                 $response = $next($request);
                 return $response->withCookie(
                     cookie('ref_code', $refCode, 60 * 24 * 30)

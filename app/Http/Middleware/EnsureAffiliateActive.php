@@ -8,10 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureAffiliateActive
 {
-    /**
-     * Pastikan user yang sedang login adalah afiliasi dengan status 'active'.
-     * Digunakan di route group: Route::middleware('affiliate.active')
-     */
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();

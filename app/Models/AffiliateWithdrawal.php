@@ -7,10 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AffiliateWithdrawal extends Model
 {
-    /**
-     * Kolom sesuai migrasi: affiliate_withdrawals table.
-     * Status: pending → processing → completed | rejected
-     */
+
     protected $fillable = [
         'affiliate_id',
         'amount',
@@ -29,28 +26,19 @@ class AffiliateWithdrawal extends Model
         'processed_at' => 'datetime',
     ];
 
-    // ──────────────────────── Relations ────────────────────────
-
-    /**
-     * User afiliasi yang mengajukan penarikan.
-     * (FK affiliate_id → users.id)
-     */
+    //Relations
     public function affiliate(): BelongsTo
     {
         return $this->belongsTo(User::class, 'affiliate_id');
     }
 
-    /**
-     * Admin yang memproses penarikan.
-     * (FK processed_by → users.id)
-     */
+
     public function processedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'processed_by');
     }
 
-    // ──────────────────────── Scopes ──────────────────────────
-
+    // Scopes
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
