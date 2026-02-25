@@ -7,13 +7,22 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id'               => $this->id,
+            'name'             => $this->name,
+            'email'            => $this->email,
+            'role'             => $this->role,
+            'telegram_chat_id' => $this->telegram_chat_id,
+            'is_active'        => $this->is_active,
+            'created_at'       => $this->created_at?->toISOString(),
+
+            // Sertakan profil afiliasi jika sudah di-load
+            'affiliate_profile' => $this->when(
+                $this->relationLoaded('affiliateProfile'),
+                fn () => new AffiliateProfileResource($this->affiliateProfile)
+            ),
+        ];
     }
 }

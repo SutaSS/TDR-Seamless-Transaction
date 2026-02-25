@@ -18,9 +18,9 @@
             Anda akan mendapat notifikasi via Telegram setelah diapprove.</div>
         </div>
     </div>
-    @elseif($affiliate->status === 'rejected')
+    @elseif($affiliate->status === 'suspended')
     <div class="alert alert-danger mb-4">
-        <strong>Akun Affiliate Ditolak</strong> — Hubungi admin untuk informasi lebih lanjut.
+        <strong>Akun Affiliate Ditangguhkan</strong> — Hubungi admin untuk informasi lebih lanjut.
     </div>
     @endif
 
@@ -28,10 +28,10 @@
         <div>
             <h4 class="fw-bold mb-0">Dashboard Affiliate</h4>
             <p class="text-muted mb-0">{{ $affiliate->user?->name }} · <code>{{ $affiliate->referral_code }}</code>
-                <span class="badge {{ $affiliate->status === 'approved' ? 'bg-success' : ($affiliate->status === 'pending' ? 'bg-warning text-dark' : 'bg-danger') }} ms-1">{{ $affiliate->status }}</span>
+                <span class="badge {{ $affiliate->status === 'active' ? 'bg-success' : ($affiliate->status === 'pending' ? 'bg-warning text-dark' : 'bg-danger') }} ms-1">{{ $affiliate->status }}</span>
             </p>
         </div>
-        @if($affiliate->status === 'approved')
+        @if($affiliate->status === 'active')
         <div class="input-group" style="max-width:350px">
             <input type="text" class="form-control form-control-sm" id="refLink" value="{{ $referralLink }}" readonly>
             <button class="btn btn-sm btn-outline-secondary"
@@ -74,7 +74,7 @@
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
             <span><i class="bi bi-wallet2 text-success me-1"></i> Data Pencairan Komisi</span>
-            @if($affiliate->payout_account_number)
+            @if($affiliate->bank_account_number)
                 <span class="badge bg-success">Lengkap</span>
             @else
                 <span class="badge bg-warning text-dark">Belum diisi</span>
@@ -89,42 +89,42 @@
                 @method('PUT')
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold small">Metode Pembayaran</label>
-                        <select name="payout_method" class="form-select @error('payout_method') is-invalid @enderror" required>
+                        <label class="form-label fw-semibold small">Nama Bank / E-Wallet</label>
+                        <select name="bank_name" class="form-select @error('bank_name') is-invalid @enderror" required>
                             <option value="">— Pilih —</option>
                             @foreach([
-                                'ovo'          => 'OVO',
-                                'gopay'        => 'GoPay',
-                                'dana'         => 'DANA',
-                                'shopeepay'    => 'ShopeePay',
-                                'bank_bca'     => 'Bank BCA',
-                                'bank_bri'     => 'Bank BRI',
-                                'bank_bni'     => 'Bank BNI',
-                                'bank_mandiri' => 'Bank Mandiri',
-                                'manual'       => 'Manual / Lainnya',
+                                'OVO'          => 'OVO',
+                                'GoPay'        => 'GoPay',
+                                'DANA'         => 'DANA',
+                                'ShopeePay'    => 'ShopeePay',
+                                'BCA'          => 'Bank BCA',
+                                'BRI'          => 'Bank BRI',
+                                'BNI'          => 'Bank BNI',
+                                'Mandiri'      => 'Bank Mandiri',
+                                'Lainnya'      => 'Manual / Lainnya',
                             ] as $val => $label)
-                                <option value="{{ $val }}" {{ old('payout_method', $affiliate->payout_method) === $val ? 'selected' : '' }}>
+                                <option value="{{ $val }}" {{ old('bank_name', $affiliate->bank_name) === $val ? 'selected' : '' }}>
                                     {{ $label }}
                                 </option>
                             @endforeach
                         </select>
-                        @error('payout_method')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        @error('bank_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold small">Nomor Rekening / Akun</label>
-                        <input type="text" name="payout_account_number"
-                               value="{{ old('payout_account_number', $affiliate->payout_account_number) }}"
-                               class="form-control @error('payout_account_number') is-invalid @enderror"
+                        <input type="text" name="bank_account_number"
+                               value="{{ old('bank_account_number', $affiliate->bank_account_number) }}"
+                               class="form-control @error('bank_account_number') is-invalid @enderror"
                                placeholder="Contoh: 081234567890" required>
-                        @error('payout_account_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        @error('bank_account_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold small">Nama Pemilik Akun</label>
-                        <input type="text" name="payout_account_name"
-                               value="{{ old('payout_account_name', $affiliate->payout_account_name) }}"
-                               class="form-control @error('payout_account_name') is-invalid @enderror"
+                        <input type="text" name="bank_account_holder"
+                               value="{{ old('bank_account_holder', $affiliate->bank_account_holder) }}"
+                               class="form-control @error('bank_account_holder') is-invalid @enderror"
                                placeholder="Sesuai nama di aplikasi / buku tabungan" required>
-                        @error('payout_account_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        @error('bank_account_holder')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                 </div>
                 <div class="mt-3">
@@ -158,9 +158,9 @@
                         </div>
                         <div class="text-end">
                             <div class="fw-bold small">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</div>
-                            <span class="badge bg-{{ match($order->order_status) {
-                                'paid'=>'primary','shipped'=>'info text-dark','delivered'=>'success',default=>'secondary'
-                            } }}" style="font-size:.7rem">{{ $order->order_status }}</span>
+                            <span class="badge bg-{{ match($order->status) {
+                                'verified'=>'primary','shipped'=>'info text-dark','completed'=>'success',default=>'secondary'
+                            } }}" style="font-size:.7rem">{{ $order->status }}</span>
                         </div>
                     </li>
                 @empty

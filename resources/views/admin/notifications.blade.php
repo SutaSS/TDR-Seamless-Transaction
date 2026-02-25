@@ -12,9 +12,8 @@
                     <th>ID</th>
                     <th>Penerima</th>
                     <th>Pesanan</th>
-                    <th>Event</th>
+                    <th>Tipe Pesan</th>
                     <th>Status</th>
-                    <th>Retry</th>
                     <th>Waktu</th>
                 </tr>
             </thead>
@@ -22,20 +21,19 @@
             @forelse($notifications as $n)
                 <tr>
                     <td class="text-muted small">#{{ $n->id }}</td>
-                    <td>{{ $n->user?->name ?? '—' }}</td>
+                    <td>{{ $n->user?->name ?? $n->recipient ?? '—' }}</td>
                     <td>
                         @if($n->order)
                             <a href="{{ route('admin.orders.show', $n->order) }}">#{{ $n->order->order_number }}</a>
                         @else —
                         @endif
                     </td>
-                    <td><span class="badge bg-secondary">{{ $n->event_type }}</span></td>
+                    <td><span class="badge bg-secondary">{{ $n->message_type }}</span></td>
                     <td>
                         <span class="badge bg-{{ match($n->status) {
                             'sent'=>'success','failed'=>'danger','queued'=>'warning text-dark',default=>'secondary'
                         } }}">{{ $n->status }}</span>
                     </td>
-                    <td>{{ $n->retry_count }}</td>
                     <td class="text-muted small">
                         {{ $n->sent_at?->format('d/m H:i') ?? $n->created_at->format('d/m H:i') }}
                     </td>

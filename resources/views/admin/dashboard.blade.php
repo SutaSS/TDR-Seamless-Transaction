@@ -52,11 +52,11 @@
                     @forelse($recentOrders as $order)
                         <tr>
                             <td><a href="{{ route('admin.orders.show', $order) }}">#{{ $order->order_number }}</a></td>
-                            <td>{{ $order->customer_name ?? $order->customer?->name ?? '-' }}</td>
+                            <td>{{ $order->customer?->name ?? '-' }}</td>
                             <td>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</td>
                             <td>
-                                <span class="badge badge-{{ $order->order_status }}">{{ $order->order_status }}</span>
-                                @if($order->payment_status === 'paid')
+                                <span class="badge badge-{{ $order->status }}">{{ $order->status }}</span>
+                                @if($order->payment_verified_at)
                                     <span class="badge bg-primary ms-1" style="font-size:.65rem">paid</span>
                                 @endif
                             </td>
@@ -81,7 +81,7 @@
                         <div class="fw-semibold">{{ $aff->user?->name ?? 'N/A' }}</div>
                         <small class="text-muted">{{ $aff->conversions_count }} konversi</small>
                     </div>
-                    <span class="text-success fw-bold">Rp {{ number_format($aff->conversions_sum_commission_amount ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-success fw-bold">Rp {{ number_format($aff->commissions_sum_amount ?? 0, 0, ',', '.') }}</span>
                 </li>
             @empty
                 <li class="list-group-item text-muted text-center py-3">Belum ada affiliate</li>

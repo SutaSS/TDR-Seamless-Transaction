@@ -10,7 +10,7 @@
                 <div class="card-body p-4">
                     <h4 class="fw-bold mb-1 text-center">Buat Akun Baru</h4>
                     <p class="text-muted text-center small mb-4">
-                        Gunakan email <code>@tdr.com</code> untuk akun admin
+                        Gunakan email <code>@tdr-hpz.com</code> untuk akun admin
                     </p>
 
                     <form method="POST" action="{{ route('register.post') }}">
@@ -40,20 +40,7 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Nomor Telepon <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-phone"></i></span>
-                                <input type="tel" name="phone" value="{{ old('phone') }}"
-                                       class="form-control @error('phone') is-invalid @enderror"
-                                       placeholder="08123456789" required>
-                            </div>
-                            @error('phone')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
+<div class="mb-3">
                             <label class="form-label fw-semibold">Password</label>
                             <input type="password" name="password"
                                    class="form-control @error('password') is-invalid @enderror"

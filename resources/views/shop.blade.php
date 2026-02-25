@@ -48,8 +48,8 @@
         @foreach($products as $product)
         <div class="col-sm-6 col-md-4 col-lg-3">
             <div class="card h-100 shadow-sm border-0 product-card">
-                @if($product->image_url ?? false)
-                    <img src="{{ $product->image_url }}" class="card-img-top" style="height:180px;object-fit:cover" alt="{{ $product->name }}">
+                @if($product->thumbnail_url ?? false)
+                    <img src="{{ $product->thumbnail_url }}" class="card-img-top" style="height:180px;object-fit:cover" alt="{{ $product->name }}">
                 @else
                     <div class="bg-light d-flex flex-column align-items-center justify-content-center" style="height:180px;">
                         <div style="font-size:3rem">🏍</div>

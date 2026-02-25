@@ -5,9 +5,10 @@
 <div class="d-flex align-items-center mb-4 gap-3">
     <a href="{{ route('admin.orders') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
     <h4 class="fw-bold mb-0">Pesanan #{{ $order->order_number }}</h4>
-    <span class="badge fs-6 bg-{{ match($order->order_status) {
-        'pending'=>'warning text-dark','paid'=>'primary','shipped'=>'info text-dark','delivered'=>'success',default=>'secondary'
-    } }}">{{ $order->order_status }}</span>
+    <span class="badge fs-6 bg-{{ match($order->status) {
+        'pending'=>'warning text-dark','verified'=>'primary','processing'=>'purple',
+        'shipped'=>'info text-dark','completed'=>'success',default=>'secondary'
+    } }}">{{ $order->status }}</span>
 </div>
 
 <div class="row g-4">
@@ -23,10 +24,10 @@
                 <tbody>
                 @foreach($order->items as $item)
                     <tr>
-                        <td>{{ $item->product_name_snapshot }}</td>
-                        <td>{{ $item->qty }}</td>
-                        <td>Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                        <td>Rp {{ number_format($item->line_total, 0, ',', '.') }}</td>
+                        <td>{{ $item->product_name }}</td>
+                        <td>{{ $item->quantity }}</td>
+                        <td>Rp {{ number_format($item->product_price, 0, ',', '.') }}</td>
+                        <td>Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -43,13 +44,11 @@
         <div class="card mb-4">
             <div class="card-header"><strong>Riwayat Status</strong></div>
             <ul class="list-group list-group-flush">
-            @forelse($order->statusHistories as $h)
+            @forelse($order->trackingLogs as $h)
                 <li class="list-group-item">
-                    <span class="badge bg-secondary">{{ $h->from_status ?? '—' }}</span>
-                    <i class="bi bi-arrow-right mx-1"></i>
-                    <span class="badge bg-primary">{{ $h->to_status }}</span>
-                    <span class="text-muted small ms-2">oleh {{ $h->changedBy?->name ?? 'System' }} · {{ $h->changed_at?->format('d/m/Y H:i') }}</span>
-                    @if($h->note) <div class="small text-muted mt-1">{{ $h->note }}</div> @endif
+                    <span class="badge bg-primary">{{ $h->status_title }}</span>
+                    <span class="text-muted small ms-2">{{ $h->created_at?->format('d/m/Y H:i') }}</span>
+                    @if($h->description) <div class="small text-muted mt-1">{{ $h->description }}</div> @endif
                 </li>
             @empty
                 <li class="list-group-item text-muted">Belum ada riwayat</li>
@@ -59,17 +58,17 @@
 
         {{-- Update Status Form --}}
         @php
-            // Admin hanya bisa: processing→shipped, shipped→delivered
-            // paid (payment) dikerjakan oleh Midtrans webhook otomatis
-            $nextStatus = match($order->order_status) {
+            // Admin can: processing→shipped, shipped→completed
+            // payment is confirmed automatically by Midtrans webhook
+            $nextStatus = match($order->status) {
                 'processing' => 'shipped',
-                'shipped'    => 'delivered',
+                'shipped'    => 'completed',
                 default      => null,
             };
         @endphp
 
         {{-- Menunggu Pembayaran (unpaid) --}}
-        @if($order->payment_status === 'unpaid')
+        @if(!$order->payment_verified_at)
         <div class="card border-warning mt-3">
             <div class="card-header bg-warning text-dark"><strong>⏳ Menunggu Pembayaran</strong></div>
             <div class="card-body small">
@@ -102,11 +101,11 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Nomor Resi <span class="text-danger">*</span></label>
-                                <input type="text" name="tracking_number" class="form-control" placeholder="JNE123456789" required>
+                                <input type="text" name="shipping_tracking_number" class="form-control" placeholder="JNE123456789" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Ekspedisi</label>
-                                <input type="text" name="shipping_provider" class="form-control" placeholder="JNE / J&T / SiCepat">
+                                <input type="text" name="shipping_courier" class="form-control" placeholder="JNE / J&T / SiCepat">
                             </div>
                         </div>
                     @endif
@@ -159,8 +158,7 @@
         <div class="card mb-3">
             <div class="card-header"><strong>Info Pelanggan</strong></div>
             <div class="card-body small">
-                <div><strong>Nama:</strong> {{ $order->customer_name ?? $order->customer?->name ?? '-' }}</div>
-                <div><strong>Telepon:</strong> {{ $order->customer_phone ?? '-' }}</div>
+                <div><strong>Nama:</strong> {{ $order->customer?->name ?? '-' }}</div>
                 <div><strong>Email:</strong> {{ $order->customer?->email ?? '-' }}</div>
             </div>
         </div>
@@ -169,36 +167,38 @@
         <div class="card mb-3">
             <div class="card-header"><strong>Affiliate</strong></div>
             <div class="card-body small">
-                <div><strong>Kode:</strong> {{ $order->affiliate->referral_code }}</div>
-                <div><strong>Nama:</strong> {{ $order->affiliate->user?->name ?? '-' }}</div>
-                @if($order->conversion)
+                <div><strong>Kode:</strong> {{ $order->affiliate?->affiliateProfile?->referral_code ?? '-' }}</div>
+                <div><strong>Nama:</strong> {{ $order->affiliate?->name ?? '-' }}</div>
+                @if($order->commission)
                     <div class="mt-2 text-success fw-semibold">
-                        Komisi: Rp {{ number_format($order->conversion->commission_amount, 0, ',', '.') }}
-                        ({{ $order->conversion->commission_rate }}%)
+                        Komisi: Rp {{ number_format($order->commission->amount, 0, ',', '.') }}
+                        ({{ $order->commission->commission_rate }}%)
                     </div>
                 @endif
             </div>
         </div>
         @endif
 
-        @if($order->payment)
+        @if($order->payment_verified_at)
         <div class="card mb-3">
             <div class="card-header"><strong>Pembayaran</strong></div>
             <div class="card-body small">
-                <div><strong>Gateway:</strong> {{ $order->payment->gateway_provider }}</div>
-                <div><strong>Metode:</strong> {{ $order->payment->payment_method ?? '-' }}</div>
-                <div><strong>Status:</strong> {{ $order->payment->status }}</div>
-                <div><strong>Waktu:</strong> {{ $order->payment->paid_at?->format('d/m/Y H:i') ?? '-' }}</div>
+                <div><strong>Metode:</strong> {{ $order->payment_method ?? '-' }}</div>
+                <div><strong>Status:</strong> <span class="badge bg-success">Lunas</span></div>
+                <div><strong>Waktu:</strong> {{ $order->payment_verified_at?->format('d/m/Y H:i') ?? '-' }}</div>
+                @if($order->midtrans_transaction_id)
+                    <div><strong>ID Transaksi:</strong> <code>{{ $order->midtrans_transaction_id }}</code></div>
+                @endif
             </div>
         </div>
         @endif
 
-        @if($order->tracking_number)
+        @if($order->shipping_tracking_number)
         <div class="card">
             <div class="card-header"><strong>Pengiriman</strong></div>
             <div class="card-body small">
-                <div><strong>Ekspedisi:</strong> {{ $order->shipping_provider ?? '-' }}</div>
-                <div><strong>No Resi:</strong> <span class="fw-bold">{{ $order->tracking_number }}</span></div>
+                <div><strong>Ekspedisi:</strong> {{ $order->shipping_courier ?? '-' }}</div>
+                <div><strong>No Resi:</strong> <span class="fw-bold">{{ $order->shipping_tracking_number }}</span></div>
             </div>
         </div>
         @endif

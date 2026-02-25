@@ -33,24 +33,29 @@
             @forelse($orders as $order)
                 <tr>
                     <td><a href="{{ route('admin.orders.show', $order) }}" class="fw-semibold">#{{ $order->order_number }}</a></td>
-                    <td>{{ $order->customer_name ?? $order->customer?->name ?? '-' }}</td>
+                    <td>{{ $order->customer?->name ?? '-' }}</td>
                     <td>
                         @if($order->affiliate)
-                            <span class="badge bg-info text-dark">{{ $order->affiliate->referral_code }}</span>
+                            <span class="badge bg-info text-dark">{{ $order->affiliate->affiliateProfile?->referral_code ?? '-' }}</span>
                         @else
                             <span class="text-muted">-</span>
                         @endif
                     </td>
                     <td>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</td>
                     <td>
-                        <span class="badge bg-{{ match($order->order_status) {
-                            'pending' => 'warning text-dark', 'paid' => 'primary',
-                            'shipped' => 'info text-dark', 'delivered' => 'success', default => 'secondary'
-                        } }}">{{ $order->order_status }}</span>
+                        <span class="badge bg-{{ match($order->status) {
+                            'pending'    => 'warning text-dark',
+                            'verified'   => 'primary',
+                            'processing' => 'purple',
+                            'shipped'    => 'info text-dark',
+                            'completed'  => 'success',
+                            'cancelled'  => 'secondary',
+                            default      => 'secondary'
+                        } }}">{{ $order->status }}</span>
                     </td>
                     <td>
-                        <span class="badge bg-{{ $order->payment_status === 'paid' ? 'success' : 'secondary' }}">
-                            {{ $order->payment_status }}
+                        <span class="badge bg-{{ $order->payment_verified_at ? 'success' : 'secondary' }}">
+                            {{ $order->payment_verified_at ? 'paid' : 'unpaid' }}
                         </span>
                     </td>
                     <td class="text-muted small">{{ $order->created_at->format('d/m/Y H:i') }}</td>

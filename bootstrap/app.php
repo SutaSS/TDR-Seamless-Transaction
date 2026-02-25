@@ -16,11 +16,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         // Exempt webhook dari CSRF
-        $middleware->validateCsrfTokens(except: ['api/webhook/payment']);
+        $middleware->validateCsrfTokens(except: ['api/webhook/payment', 'api/webhooks/midtrans']);
 
         // Redirect guest (belum login) ke login; user sudah login ke home
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->redirectUsersTo(fn () => route('home'));
+
+        // Alias middleware custom
+        $middleware->alias([
+            'affiliate.active' => \App\Http\Middleware\EnsureAffiliateActive::class,
+            'role'             => \App\Http\Middleware\EnsureUserRole::class,
+            'track.affiliate'  => \App\Http\Middleware\TrackAffiliateClick::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

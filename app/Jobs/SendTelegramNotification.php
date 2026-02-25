@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Notification;
+use App\Models\NotificationLog;
 use App\Services\TelegramService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -25,7 +25,7 @@ class SendTelegramNotification implements ShouldQueue
      */
     public function handle(TelegramService $telegram): void
     {
-        $notification = Notification::find($this->notificationId);
+        $notification = NotificationLog::find($this->notificationId);
 
         if (! $notification) {
             Log::warning("SendTelegramNotification: Notification #{$this->notificationId} not found");
@@ -53,7 +53,7 @@ class SendTelegramNotification implements ShouldQueue
             return;
         }
 
-        $success = $telegram->sendMessage($chatId, $notification->message_body);
+        $success = $telegram->sendMessage($chatId, $notification->message_content);
 
         if ($success) {
             $notification->update([
@@ -62,12 +62,10 @@ class SendTelegramNotification implements ShouldQueue
             ]);
             Log::info("SendTelegramNotification: Sent notification #{$this->notificationId} to {$chatId}");
         } else {
-            $notification->increment('retry_count');
-
             if ($this->attempts() >= $this->tries) {
                 $notification->update([
-                    'status'     => 'failed',
-                    'last_error' => 'Max retries exceeded',
+                    'status'        => 'failed',
+                    'error_message' => 'Max retries exceeded',
                 ]);
                 Log::error("SendTelegramNotification: Permanently failed notification #{$this->notificationId}");
                 $this->fail();
