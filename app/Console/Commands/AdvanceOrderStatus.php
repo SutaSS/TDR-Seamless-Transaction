@@ -26,7 +26,7 @@ class AdvanceOrderStatus extends Command
         $now     = Carbon::now();
         $advanced = 0;
 
-        // ── 1. pending → processing (1 menit setelah payment_verified_at) ──
+        // ── 1. pending → processing (1 menit setelah payment_verified_at)
         Order::whereNotNull('payment_verified_at')
             ->where('status', 'pending')
             ->where('payment_verified_at', '<=', $now->copy()->subMinute())
@@ -36,7 +36,7 @@ class AdvanceOrderStatus extends Command
                 $this->line("  ✅ #{$order->order_number}: pending → processing");
             });
 
-        // ── 2. processing → shipped (5 menit setelah updated_at) ───────────
+        // ── 2. processing → shipped (5 menit setelah updated_at)
         Order::where('status', 'processing')
             ->where('updated_at', '<=', $now->copy()->subMinutes(5))
             ->each(function (Order $order) use (&$advanced) {
@@ -45,7 +45,7 @@ class AdvanceOrderStatus extends Command
                 $this->line("  🚚 #{$order->order_number}: processing → shipped");
             });
 
-        // ── 3. shipped → completed (15 menit setelah shipped_at) ────────────
+        // ── 3. shipped → completed (15 menit setelah shipped_at)
         Order::where('status', 'shipped')
             ->where(function ($q) use ($now) {
                 $q->whereNotNull('shipped_at')

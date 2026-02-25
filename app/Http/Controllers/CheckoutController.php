@@ -63,7 +63,7 @@ class CheckoutController extends Controller
 
         $data = $request->validate([
             'product_id'       => 'required|integer|exists:products,id',
-            'quantity'         => 'required|integer|min:1',
+            'qty'              => 'required|integer|min:1',
             'shipping_courier' => 'required|string|in:' . implode(',', array_keys($this->couriers)),
             'shipping_address' => 'required|string',
             'customer_name'    => 'required|string|max:255',
@@ -86,7 +86,7 @@ class CheckoutController extends Controller
 
         $orderData = [
             'product_id'       => $data['product_id'],
-            'quantity'         => $data['quantity'],
+            'quantity'         => $data['qty'],
             'shipping_courier' => $data['shipping_courier'],
             'shipping_address' => $combinedAddress,
             'notes'            => $data['notes'] ?? null,
@@ -111,10 +111,21 @@ class CheckoutController extends Controller
     {
         $order = null;
 
-        if ($request->query('order_number')) {
-            $order = Order::where('order_number', $request->query('order_number'))
+        // support both ?order_number=TDR-xxx (internal) and ?order_id=TDR-xxx (Midtrans redirect)
+        $orderNumber = $request->query('order_number') ?? $request->query('order_id');
+
+        if ($orderNumber) {
+            $order = Order::where('order_number', $orderNumber)
                 ->where('customer_id', $request->user()->id)
                 ->first();
+        }
+
+        // Auto-verify: if order still unpaid, check Midtrans API directly
+        if ($order && ! $order->payment_verified_at) {
+            $status = $this->orderService->checkAndVerifyPayment($order);
+            if ($status) {
+                $order->refresh();
+            }
         }
 
         return view('checkout.success', compact('order'));

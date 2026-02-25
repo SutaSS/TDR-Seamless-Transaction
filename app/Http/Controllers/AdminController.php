@@ -195,7 +195,7 @@ class AdminController extends Controller
     {
         $this->ensureAdmin();
 
-        abort_unless(app()->isLocal(), 403, 'Hanya tersedia di environment local.');
+        abort_unless(! app()->isProduction(), 403, 'Hanya tersedia di environment non-production.');
 
         $this->orderService->verifyPayment($order, 'SIMULATED-' . now()->timestamp);
 
