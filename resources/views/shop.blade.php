@@ -79,34 +79,11 @@
                         @endif
                     </div>
                 </div>
+                @if(($product->stock ?? 1) <= 0)
                 <div class="card-footer border-0 pb-3">
-                    @if(($product->stock ?? 1) > 0)
-                        @auth
-                        <form method="POST" action="{{ route('cart.add') }}" class="d-flex gap-2"
-                              onclick="event.stopPropagation()">
-                            @csrf
-                            <input type="hidden" name="product_id" value="{{ $product->id }}">
-                            <input type="hidden" name="quantity" value="1">
-                            {{-- No affiliate_code here: referral only applies via product-specific share links --}}
-                            <button type="submit" class="btn btn-primary flex-grow-1 fw-semibold" style="font-size:.8rem">
-                                <i class="bi bi-cart-plus me-1"></i>Keranjang
-                            </button>
-                            <a href="{{ route('product.show', $product->slug) }}"
-                               class="btn btn-outline-secondary" style="font-size:.8rem" title="Lihat Detail"
-                               onclick="event.stopPropagation()">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </form>
-                        @else
-                            <a href="{{ route('login') }}" class="btn btn-primary w-100 fw-semibold"
-                               onclick="event.stopPropagation()">
-                                <i class="bi bi-box-arrow-in-right me-1"></i> Login untuk Beli
-                            </a>
-                        @endauth
-                    @else
-                        <button class="btn btn-secondary w-100" disabled onclick="event.stopPropagation()">Stok Habis</button>
-                    @endif
+                    <button class="btn btn-secondary w-100" disabled onclick="event.stopPropagation()">Stok Habis</button>
                 </div>
+                @endif
             </div>
         </div>
         @endforeach

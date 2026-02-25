@@ -50,14 +50,10 @@ class HomeController extends Controller
                 ->where('referral_code', $affCode)
                 ->where('status', 'active')
                 ->first();
-            // No global cookie — affiliate code is per-product only.
-            // It will travel as a hidden input in the add-to-cart form on this page.
-            if (! $affiliate) {
-                $affCode = null; // invalid code, clear it
-            }
+            if (! $affiliate) $affCode = null;
         }
 
-        // Record click once per session per affiliate+product combination
+        // Track click once per session per affiliate+product
         if ($affiliate) {
             $sessionKey = 'aff_click_' . $affiliate->user_id . '_' . $product->id;
             if (! session()->has($sessionKey)) {
@@ -72,7 +68,6 @@ class HomeController extends Controller
             }
         }
 
-        // Share URL for this product
         $shareUrl = url('/products/' . $product->slug);
 
         return view('products.show', compact('product', 'affiliate', 'affCode', 'shareUrl'));

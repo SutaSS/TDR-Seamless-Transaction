@@ -93,25 +93,24 @@
         <div class="card-header fw-bold py-3 d-flex align-items-center gap-2">
             <i class="bi bi-link-45deg" style="color:var(--tdr-gold)"></i>
             Link Affiliate per Produk
-            <span class="text-muted fw-normal" style="font-size:.8rem">— bagikan link ini agar klik terlacak</span>
+            <span class="text-muted fw-normal" style="font-size:.8rem">— bagikan link agar klik terlacak</span>
         </div>
         <div class="card-body p-3">
-            <div class="d-flex flex-column gap-2">
-                @foreach($products as $prod)
-                @php $affUrl = url('/products/' . $prod->slug) . '?ref=' . $affiliate->referral_code; @endphp
-                <div class="d-flex align-items-center gap-2 p-2 rounded-3" style="background:rgba(255,255,255,.03);border:1px solid var(--tdr-border)">
-                    <div class="flex-grow-1 min-width-0" style="overflow:hidden">
-                        <div class="fw-semibold" style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $prod->name }}</div>
-                        <div class="text-muted" style="font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $affUrl }}</div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
-                            style="font-size:.75rem;white-space:nowrap"
-                            onclick="copyAffLink('{{ $affUrl }}', this)">
-                        <i class="bi bi-clipboard me-1"></i>Salin
-                    </button>
-                </div>
-                @endforeach
+            <div class="d-flex gap-2 align-items-stretch">
+                <select id="prodSelect" class="form-select form-select-sm flex-grow-1"
+                        onchange="document.getElementById('prodLinkPreview').textContent=this.value">
+                    @foreach($products as $prod)
+                    <option value="{{ url('/products/'.$prod->slug).'?ref='.$affiliate->referral_code }}">
+                        {{ $prod->name }}
+                    </option>
+                    @endforeach
+                </select>
+                <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                        onclick="copyAffLink(document.getElementById('prodSelect').value, this)">
+                    <i class="bi bi-clipboard me-1"></i>Salin
+                </button>
             </div>
+            <div class="text-muted mt-2" style="font-size:.7rem;word-break:break-all" id="prodLinkPreview"></div>
         </div>
     </div>
     @endif
@@ -290,6 +289,10 @@ function copyAffLink(url, btn) {
         setTimeout(() => btn.innerHTML = orig, 2000);
     });
 }
+// init preview on load
+const sel = document.getElementById('prodSelect');
+const preview = document.getElementById('prodLinkPreview');
+if (sel && preview) preview.textContent = sel.value;
 new Chart(document.getElementById('referralChart'), {
     type: 'bar',
     data: {

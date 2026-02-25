@@ -32,7 +32,7 @@ class CheckoutController extends Controller
         if (empty($cart) && $request->query('product_id')) {
             $product = Product::active()->find($request->query('product_id'));
             if ($product) {
-                // Affiliate code only from explicit URL param — no cookie fallback.
+                // affiliate code from URL param only
                 $affCode = $request->query('affiliate_code') ?? $request->query('ref');
 
                 if ($affCode) {
@@ -60,7 +60,6 @@ class CheckoutController extends Controller
             return redirect()->route('shop')->with('info', 'Tambahkan produk ke keranjang terlebih dahulu.');
         }
 
-        // Resolve affiliate profile per item for display
         $affiliates = [];
         foreach ($cart as $key => $item) {
             if (! empty($item['affiliate_code'])) {
@@ -140,9 +139,7 @@ class CheckoutController extends Controller
             return back()->withErrors(['general' => 'Gagal membuat pesanan: ' . $e->getMessage()]);
         }
 
-        // Do NOT clear cart here — cart is only cleared after payment is confirmed in success()
-        // This ensures the cart is intact if the user leaves Midtrans without paying.
-
+        // cart cleared only after Midtrans confirms payment
         return redirect()->away($order->midtrans_snap_token);
     }
 
