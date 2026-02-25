@@ -11,9 +11,7 @@ class Product extends Model
 {
     use SoftDeletes;
 
-    /**
-     * Kolom sesuai migrasi: products table.
-     */
+
     protected $fillable = [
         'name',
         'slug',
@@ -35,13 +33,12 @@ class Product extends Model
         'is_active' => 'boolean',
     ];
 
-    // ──────────────────────────── Boot ─────────────────────────────────
+    //Boot
 
     protected static function boot(): void
     {
         parent::boot();
 
-        // Auto-generate slug dari name jika belum ada
         static::creating(function (Product $product) {
             if (empty($product->slug)) {
                 $product->slug = Str::slug($product->name);
@@ -49,15 +46,13 @@ class Product extends Model
         });
     }
 
-    // ──────────────────────────── Scopes ───────────────────────────────
-
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    // ──────────────────────────── Relations ────────────────────────────
-
+    // Relations
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);

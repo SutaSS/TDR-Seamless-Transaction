@@ -10,10 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class TrackAffiliateClick
 {
-    /**
-     * Tangkap parameter ?ref=CODE, simpan ke cookie, dan catat klik secara async.
-     * Middleware ini dipasang di route homepage / halaman produk.
-     */
+
     public function handle(Request $request, Closure $next): Response
     {
         $refCode = $request->query('ref') ?? $request->cookie('ref_code');

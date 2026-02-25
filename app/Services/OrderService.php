@@ -32,7 +32,7 @@ class OrderService
     {
         return DB::transaction(function () use ($data, $customerId) {
 
-            // ── Normalize to items[] array ──────────────────────────────
+            // Normalize to items[] array
             if (isset($data['product_id'])) {
                 $rawItems = [[
                     'product_id'     => $data['product_id'],
@@ -43,7 +43,7 @@ class OrderService
                 $rawItems = $data['items'] ?? [];
             }
 
-            // ── Resolve products & compute totals ───────────────────────
+            // Resolve products & compute totals
             $resolvedItems = [];
             $subtotal      = 0;
             $commTotal     = 0;
@@ -137,7 +137,7 @@ class OrderService
                 ];
             }
 
-            // ── Build Midtrans Snap token ───────────────────────────────
+            //Build Midtrans Snap token
             $snapUrl = $this->midtrans->createSnapToken([
                 'transaction_details' => [
                     'order_id'     => $order->order_number,
@@ -167,11 +167,6 @@ class OrderService
         });
     }
 
-    /**
-     * Check payment status from Midtrans API and verify if settled.
-     * Used when customer is redirected back to success page.
-     * Returns true if payment was verified, false otherwise.
-     */
     public function checkAndVerifyPayment(Order $order): bool
     {
         if ($order->payment_verified_at) {
@@ -199,9 +194,7 @@ class OrderService
         return false;
     }
 
-    /**
-     * Confirm payment from Midtrans webhook, transition order to verified.
-     */
+
     public function verifyPayment(Order $order, string $transactionId): void
     {
         $commission = null;

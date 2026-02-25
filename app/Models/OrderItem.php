@@ -7,10 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderItem extends Model
 {
-    /**
-     * Kolom sesuai migrasi: order_items table.
-     * Timestamps diaktifkan (created_at & updated_at ada).
-     */
+
     protected $fillable = [
         'order_id',
         'product_id',
@@ -28,8 +25,6 @@ class OrderItem extends Model
         'quantity'          => 'integer',
         'commission_amount' => 'decimal:2',
     ];
-
-    // ──────────────────────────── Relations ────────────────────────────
 
     public function order(): BelongsTo
     {

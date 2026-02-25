@@ -11,11 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class AffiliateService
 {
-    /**
-     * Record a pending affiliate commission for an order.
-     * Uses the pre-computed commission_amount from the order if set,
-     * otherwise falls back to rate-based calculation.
-     */
+
     public function recordCommission(Order $order): ?AffiliateCommission
     {
         if (! $order->affiliate_id) {

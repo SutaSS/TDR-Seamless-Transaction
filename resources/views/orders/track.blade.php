@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-    /* ── Timeline ─────────────────────────────────────────── */
+    /* Timeline */
     .timeline {
         position: relative;
         padding-left: 28px;

@@ -19,11 +19,7 @@ class MidtransService
             : 'https://app.sandbox.midtrans.com/snap/v1';
     }
 
-    /**
-     * Validate Midtrans webhook signature.
-     *
-     * Formula: SHA512(order_id + status_code + gross_amount + server_key)
-     */
+
     public function isValidSignature(array $payload): bool
     {
         $orderId     = $payload['order_id'] ?? '';

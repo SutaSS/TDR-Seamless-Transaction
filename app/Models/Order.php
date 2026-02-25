@@ -9,9 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
-    /**
-     * Kolom sesuai migrasi: orders table.
-     */
+
     protected $fillable = [
         'order_number',
         'customer_id',
@@ -46,40 +44,32 @@ class Order extends Model
         'cancelled_at'        => 'datetime',
     ];
 
-    /** User yang membuat pesanan ini. */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'customer_id');
     }
 
-    /**
-     * User afiliasi yang mereferensikan pesanan ini.
-     * (FK affiliate_id → users.id)
-     */
+
     public function affiliate(): BelongsTo
     {
         return $this->belongsTo(User::class, 'affiliate_id');
     }
 
-    /** Item-item produk dalam pesanan. */
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
     }
 
-    /** Apakah pesanan sudah dibayar. */
     public function isPaid(): bool
     {
         return $this->payment_verified_at !== null;
     }
 
-    /** Apakah pesanan selesai. */
     public function isCompleted(): bool
     {
         return $this->status === 'completed';
     }
 
-    /** Apakah pesanan dibatalkan. */
     public function isCancelled(): bool
     {
         return $this->status === 'cancelled';

@@ -179,9 +179,7 @@ class NotificationService
         SendTelegramNotification::dispatch($notification->id);
     }
 
-    /**
-     * Notify an affiliate when their withdrawal request is received.
-     */
+
     public function notifyAffiliateWithdrawal(\App\Models\AffiliateProfile $profile, \App\Models\AffiliateWithdrawal $withdrawal): void
     {
         $user   = $profile->user;

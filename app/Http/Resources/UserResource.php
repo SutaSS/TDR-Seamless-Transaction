@@ -18,7 +18,6 @@ class UserResource extends JsonResource
             'is_active'        => $this->is_active,
             'created_at'       => $this->created_at?->toISOString(),
 
-            // Sertakan profil afiliasi jika sudah di-load
             'affiliate_profile' => $this->when(
                 $this->relationLoaded('affiliateProfile'),
                 fn () => new AffiliateProfileResource($this->affiliateProfile)

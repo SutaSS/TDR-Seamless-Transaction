@@ -6,7 +6,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class CreateOrderRequest extends FormRequest
 {
-    /** Hanya user yang sudah login yang bisa buat order. */
     public function authorize(): bool
     {
         return $this->user() !== null;

@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
  * Auto-advance order statuses based on elapsed time.
  *
  * Timing (adjustable):
- *   pending     →  processing : 1 min  after payment_verified_at
+ *   verified    →  processing : 1 min  after payment_verified_at
  *   processing  →  shipped    : 5 min  after updated_at
  *   shipped     →  completed  : 15 min after updated_at
  *
@@ -26,14 +26,14 @@ class AdvanceOrderStatus extends Command
         $now     = Carbon::now();
         $advanced = 0;
 
-        // ── 1. pending → processing (1 menit setelah payment_verified_at)
+        // ── 1. verified → processing (1 menit setelah payment_verified_at)
         Order::whereNotNull('payment_verified_at')
-            ->where('status', 'pending')
+            ->where('status', 'verified')
             ->where('payment_verified_at', '<=', $now->copy()->subMinute())
             ->each(function (Order $order) use (&$advanced) {
                 $order->update(['status' => 'processing']);
                 $advanced++;
-                $this->line("  ✅ #{$order->order_number}: pending → processing");
+                $this->line("  ✅ #{$order->order_number}: verified → processing");
             });
 
         // ── 2. processing → shipped (5 menit setelah updated_at)
