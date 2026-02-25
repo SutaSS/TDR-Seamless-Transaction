@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\SendTelegramNotification;
-use App\Models\Notification;
+use App\Models\NotificationLog;
 use App\Models\Order;
 use Illuminate\Support\Carbon;
 
@@ -27,14 +27,14 @@ class NotificationService
             return;
         }
 
-        $notification = Notification::create([
-            'user_id'                    => $user->id,
-            'order_id'                   => $order->id,
-            'event_type'                 => $event,
-            'channel'                    => 'telegram',
-            'recipient_chat_id_snapshot' => $user->telegram_chat_id,
-            'message_body'               => $message,
-            'status'                     => 'queued',
+        $notification = NotificationLog::create([
+            'user_id'         => $user->id,
+            'order_id'        => $order->id,
+            'message_type'    => $event,
+            'channel'         => 'telegram',
+            'recipient'       => $user->telegram_chat_id ?? '',
+            'message_content' => $message,
+            'status'          => 'queued',
         ]);
 
         SendTelegramNotification::dispatch($notification->id);
@@ -72,9 +72,9 @@ class NotificationService
                 "*TDR-HPZ Store*, [{$date}]\n" .
                 "📦 *Pesanan Dikirim*\n\n" .
                 "Halo {$name},\n\n" .
-                "Pesanan *{$ordNum}* telah dikirim via *{$order->shipping_provider}*.\n" .
-                ($order->tracking_number
-                    ? "Nomor Resi: `{$order->tracking_number}`\n\n"
+                "Pesanan *{$ordNum}* telah dikirim via *{$order->shipping_courier}*.\n" .
+                ($order->shipping_tracking_number
+                    ? "Nomor Resi: `{$order->shipping_tracking_number}`\n\n"
                     : "\n") .
                 "Silakan pantau pengiriman Anda. Terima kasih! 🙏",
 
@@ -97,42 +97,80 @@ class NotificationService
     }
 
     /**
-     * Notify an affiliate when they earn a commission.
+     * Notify an affiliate when their account is approved by admin.
      */
-    public function notifyAffiliateCommission(\App\Models\AffiliateConversion $conversion): void
+    public function notifyAffiliateApproved(\App\Models\AffiliateProfile $profile): void
     {
-        $affiliate = $conversion->affiliate()->with('user')->first();
-        $chatId    = $affiliate?->user?->telegram_chat_id;
+        $user   = $profile->user;
+        $chatId = $user?->telegram_chat_id;
 
         if (! $chatId) {
             return;
         }
 
-        $order      = $conversion->order;
-        $affName    = $affiliate->user->name;
+        $date    = \Illuminate\Support\Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+        $name    = $user->name;
+        $code    = $profile->referral_code;
+        $rate    = $profile->commission_rate;
+
+        $message = "*TDR-HPZ Affiliate* ✅\n\n"
+                 . "Selamat *{$name}*!\n\n"
+                 . "Akun affiliate Anda telah *disetujui*.\n\n"
+                 . "🔑 Kode Referral: `{$code}`\n"
+                 . "💰 Komisi: *{$rate}%* per transaksi\n"
+                 . "⏰ Disetujui: {$date}\n\n"
+                 . "Mulai bagikan link referral Anda dan raih komisi! 🚀";
+
+        $notification = NotificationLog::create([
+            'user_id'         => $user->id,
+            'order_id'        => null,
+            'message_type'    => 'affiliate.approved',
+            'channel'         => 'telegram',
+            'recipient'       => $chatId,
+            'message_content' => $message,
+            'status'          => 'queued',
+        ]);
+
+        SendTelegramNotification::dispatch($notification->id);
+    }
+
+    /**
+     * Notify an affiliate when they earn a commission.
+     */
+    public function notifyAffiliateCommission(\App\Models\AffiliateCommission $commission): void
+    {
+        $affiliate = $commission->affiliate;   // BelongsTo User
+        $chatId    = $affiliate?->telegram_chat_id;
+
+        if (! $chatId) {
+            return;
+        }
+
+        $order      = $commission->order;
+        $affName    = $affiliate->name;
         $ordNum     = $order?->order_number ?? '—';
-        $commission = 'Rp ' . number_format((float) $conversion->commission_amount, 0, ',', '.');
-        $rate       = $conversion->commission_rate;
+        $amount     = 'Rp ' . number_format((float) $commission->amount, 0, ',', '.');
+        $rate       = $commission->commission_rate;
         $date       = \Illuminate\Support\Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
 
         $message = "*TDR-HPZ Affiliate* 🎉\n\n"
                  . "*{$affName}*, kamu baru saja mendapatkan komisi!\n\n"
                  . "📦 Order: *{$ordNum}*\n"
-                 . "💰 Komisi ({$rate}%): *{$commission}*\n"
+                 . "💰 Komisi ({$rate}%): *{$amount}*\n"
                  . "⏰ Waktu: {$date}\n\n"
-                 . "Komisi akan masuk ke saldo setelah pesanan selesai (delivered). Keep sharing! 🚀";
+                 . "Komisi akan masuk ke saldo setelah pesanan selesai (completed). Keep sharing! 🚀";
 
-        // Create notification record
-        $notification = \App\Models\Notification::create([
-            'user_id'                    => $affiliate->user_id,
-            'order_id'                   => $conversion->order_id,
-            'event_type'                 => 'affiliate.commission',
-            'channel'                    => 'telegram',
-            'recipient_chat_id_snapshot' => $chatId,
-            'message_body'               => $message,
-            'status'                     => 'queued',
+        // Simpan log dan kirim via job
+        $notification = NotificationLog::create([
+            'user_id'         => $affiliate->id,
+            'order_id'        => $commission->order_id,
+            'message_type'    => 'affiliate.commission',
+            'channel'         => 'telegram',
+            'recipient'       => $chatId,
+            'message_content' => $message,
+            'status'          => 'queued',
         ]);
 
-        \App\Jobs\SendTelegramNotification::dispatch($notification->id);
+        SendTelegramNotification::dispatch($notification->id);
     }
 }
