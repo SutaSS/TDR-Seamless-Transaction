@@ -178,4 +178,46 @@ class NotificationService
 
         SendTelegramNotification::dispatch($notification->id);
     }
+
+    /**
+     * Notify an affiliate when their withdrawal request is received.
+     */
+    public function notifyAffiliateWithdrawal(\App\Models\AffiliateProfile $profile, \App\Models\AffiliateWithdrawal $withdrawal): void
+    {
+        $user   = $profile->user;
+        $chatId = $user?->telegram_chat_id;
+
+        if (! $chatId) {
+            return;
+        }
+
+        $date    = \Illuminate\Support\Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+        $name    = $user->name;
+        $amount  = 'Rp ' . number_format((float) $withdrawal->amount, 0, ',', '.');
+        $bank    = $withdrawal->bank_name;
+        $account = $withdrawal->bank_account_number;
+        $holder  = $withdrawal->bank_account_holder;
+
+        $message = "*TDR-HPZ Affiliate* 💸\n\n"
+                 . "Halo *{$name}*,\n\n"
+                 . "Permintaan pencairan komisi Anda telah *diterima*.\n\n"
+                 . "💰 Jumlah: *{$amount}*\n"
+                 . "🏦 Bank: *{$bank}*\n"
+                 . "📋 No. Rekening: `{$account}`\n"
+                 . "👤 Atas Nama: {$holder}\n"
+                 . "⏰ Diajukan: {$date}\n\n"
+                 . "Admin akan memproses pencairan dalam 1×24 jam. Kami akan menghubungi Anda jika ada kendala. 🙏";
+
+        $notification = NotificationLog::create([
+            'user_id'         => $user->id,
+            'order_id'        => null,
+            'message_type'    => 'affiliate.withdrawal',
+            'channel'         => 'telegram',
+            'recipient'       => $chatId,
+            'message_content' => $message,
+            'status'          => 'queued',
+        ]);
+
+        SendTelegramNotification::dispatch($notification->id);
+    }
 }

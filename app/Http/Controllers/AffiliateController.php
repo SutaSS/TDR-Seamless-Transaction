@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AffiliateProfile;
+use App\Models\AffiliateWithdrawal;
 use App\Services\AffiliateService;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
@@ -101,7 +103,56 @@ class AffiliateController extends Controller
             ->take(5)
             ->get();
 
-        return view('affiliate.dashboard', compact('affiliate', 'stats', 'chartData', 'referralLink', 'recentOrders'));
+        $pendingWithdrawal = AffiliateWithdrawal::where('affiliate_id', $user->id)
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
+
+        return view('affiliate.dashboard', compact('affiliate', 'stats', 'chartData', 'referralLink', 'recentOrders', 'pendingWithdrawal'));
+    }
+
+    /** POST /affiliate/withdraw */
+    public function requestWithdrawal(Request $request): RedirectResponse
+    {
+        $user      = $request->user();
+        $affiliate = $user->affiliateProfile;
+
+        if (! $affiliate || $affiliate->status !== 'active') {
+            return back()->with('withdraw_error', 'Akun affiliate tidak aktif.');
+        }
+
+        if (! $affiliate->bank_account_number) {
+            return back()->with('withdraw_error', 'Lengkapi data rekening terlebih dahulu sebelum mencairkan.');
+        }
+
+        $hasPending = AffiliateWithdrawal::where('affiliate_id', $user->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($hasPending) {
+            return back()->with('withdraw_error', 'Anda sudah memiliki permintaan pencairan yang sedang diproses.');
+        }
+
+        $minAmount = 50000;
+        $balance   = (float) $affiliate->balance;
+
+        if ($balance < $minAmount) {
+            return back()->with('withdraw_error', 'Saldo minimum pencairan adalah Rp ' . number_format($minAmount, 0, ',', '.') . '. Saldo Anda saat ini Rp ' . number_format($balance, 0, ',', '.') . '.');
+        }
+
+        try {
+            $withdrawal = $this->affiliateService->processWithdrawal($affiliate, $balance, [
+                'bank_name'           => $affiliate->bank_name,
+                'bank_account_number' => $affiliate->bank_account_number,
+                'bank_account_holder' => $affiliate->bank_account_holder,
+            ]);
+
+            app(NotificationService::class)->notifyAffiliateWithdrawal($affiliate, $withdrawal);
+
+            return back()->with('withdraw_success', 'Permintaan pencairan *Rp ' . number_format($balance, 0, ',', '.') . '* berhasil diajukan. Admin akan memproses dalam 1×24 jam.');
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('withdraw_error', $e->getMessage());
+        }
     }
 
     /** PUT /affiliate/payout */

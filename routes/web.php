@@ -63,6 +63,7 @@ Route::prefix('affiliate')->name('affiliate.')->group(function () {
     Route::post('/register', [AffiliateController::class, 'register'])->name('register');
     Route::get('/dashboard', [AffiliateController::class, 'dashboard'])->name('dashboard');
     Route::put('/payout',    [AffiliateController::class, 'updatePayout'])->name('payout');
+    Route::post('/withdraw', [AffiliateController::class, 'requestWithdrawal'])->name('withdraw');
 });
 
 // Admin

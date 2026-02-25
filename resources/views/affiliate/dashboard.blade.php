@@ -93,6 +93,67 @@
         </div>
     </div>
 
+    {{-- Saldo & Pencairan --}}
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            @if(session('withdraw_success'))
+                <div class="alert alert-success py-2 mb-3">
+                    <i class="bi bi-check-circle me-1"></i> {{ session('withdraw_success') }}
+                </div>
+            @endif
+            @if(session('withdraw_error'))
+                <div class="alert alert-danger py-2 mb-3">
+                    <i class="bi bi-exclamation-triangle me-1"></i> {{ session('withdraw_error') }}
+                </div>
+            @endif
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <div class="text-muted small mb-1"><i class="bi bi-wallet2 me-1"></i>Saldo Komisi Tersedia</div>
+                    <div class="fw-bold" style="font-size:1.75rem;color:var(--tdr-gold)">
+                        Rp {{ number_format($stats['balance'], 0, ',', '.') }}
+                    </div>
+                    <div class="text-muted" style="font-size:.75rem">Minimum pencairan: Rp 50.000</div>
+                </div>
+
+                <div>
+                    @if($affiliate->status !== 'active')
+                        <span class="badge px-3 py-2" style="background:rgba(212,168,67,.15);color:var(--tdr-gold);font-size:.8rem">
+                            <i class="bi bi-lock me-1"></i> Akun belum aktif
+                        </span>
+                    @elseif(! $affiliate->bank_account_number)
+                        <span class="badge px-3 py-2" style="background:rgba(230,57,70,.15);color:var(--tdr-red);font-size:.8rem">
+                            <i class="bi bi-exclamation-circle me-1"></i> Isi data rekening dulu
+                        </span>
+                    @elseif($pendingWithdrawal)
+                        <div class="text-end">
+                            <span class="badge px-3 py-2" style="background:rgba(212,168,67,.15);color:var(--tdr-gold);font-size:.8rem">
+                                <i class="bi bi-hourglass-split me-1"></i> Pencairan sedang diproses
+                            </span>
+                            <div class="text-muted mt-1" style="font-size:.72rem">
+                                Rp {{ number_format($pendingWithdrawal->amount, 0, ',', '.') }}
+                                · {{ $pendingWithdrawal->created_at->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB
+                            </div>
+                        </div>
+                    @elseif($stats['balance'] < 50000)
+                        <span class="badge px-3 py-2" style="background:rgba(255,255,255,.05);color:var(--tdr-muted);font-size:.8rem">
+                            <i class="bi bi-info-circle me-1"></i> Saldo belum mencukupi
+                        </span>
+                    @else
+                        <form method="POST" action="{{ route('affiliate.withdraw') }}"
+                              onsubmit="return confirm('Cairkan semua saldo Rp {{ number_format($stats[\'balance\'], 0, \',\', \'.\') }} ke {{ $affiliate->bank_name }} ({{ $affiliate->bank_account_number }})?')">
+                            @csrf
+                            <button type="submit" class="btn fw-semibold px-4"
+                                    style="background:var(--tdr-gold);color:#0b0b0f;border-radius:8px">
+                                <i class="bi bi-cash-coin me-1"></i> Cairkan Rp {{ number_format($stats['balance'], 0, ',', '.') }}
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Payout Identity --}}
     <div class="card shadow-sm mb-4">
         <div class="card-header fw-bold py-3 d-flex justify-content-between align-items-center">
