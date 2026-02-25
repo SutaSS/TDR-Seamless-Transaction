@@ -51,8 +51,19 @@
             <div class="card-header"><strong>Riwayat Status</strong></div>
             <ul class="list-group list-group-flush">
             @forelse($order->trackingLogs as $h)
+                @php
+                    $badgeClass = match(true) {
+                        str_contains($h->status_title, 'Dibuat')       => 'badge-paid',
+                        str_contains($h->status_title, 'Dikonfirmasi') => 'badge-paid',
+                        str_contains($h->status_title, 'Diproses')     => 'badge-processing',
+                        str_contains($h->status_title, 'Dikirim')      => 'badge-shipped',
+                        str_contains($h->status_title, 'Diterima')     => 'badge-delivered',
+                        str_contains($h->status_title, 'Dibatalkan')   => 'badge-cancelled',
+                        default                                         => 'badge-paid',
+                    };
+                @endphp
                 <li class="list-group-item">
-                    <span class="badge badge-paid">{{ $h->status_title }}</span>
+                    <span class="badge {{ $badgeClass }}">{{ $h->status_title }}</span>
                     <span class="text-muted small ms-2">{{ $h->created_at?->format('d/m/Y H:i') }}</span>
                     @if($h->description) <div class="small text-muted mt-1">{{ $h->description }}</div> @endif
                 </li>

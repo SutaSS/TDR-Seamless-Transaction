@@ -170,11 +170,18 @@ class AdminController extends Controller
         }
 
         // Suppress observer so notification fires once (explicit call below, with note)
-        Order::withoutObservers(fn () => $order->update($updates));
+        $order->fill($updates)->saveQuietly();
+
+        $statusLabel = [
+            'processing' => 'Sedang Diproses',
+            'shipped'    => 'Pesanan Dikirim',
+            'completed'  => 'Pesanan Diterima',
+            'cancelled'  => 'Pesanan Dibatalkan',
+        ][$data['status']] ?? ucfirst($data['status']);
 
         TrackingLog::create([
             'order_id'     => $order->id,
-            'status_title' => 'Status Diperbarui: ' . ucfirst($data['status']),
+            'status_title' => $statusLabel,
             'description'  => $data['note'] ?? null,
         ]);
 
@@ -208,7 +215,7 @@ class AdminController extends Controller
 
         $event = $request->event;
 
-        // Map event → new order status (if applicable)
+        // Map event → new order status
         $statusMap = [
             'order.processing' => 'processing',
             'order.shipped'    => 'shipped',
@@ -219,10 +226,11 @@ class AdminController extends Controller
             $newStatus = $statusMap[$event];
             $updates   = ['status' => $newStatus];
 
-            if ($newStatus === 'shipped')    $updates['shipped_at']   = now();
-            if ($newStatus === 'completed')  $updates['completed_at'] = now();
+            if ($newStatus === 'shipped')   $updates['shipped_at']   = now();
+            if ($newStatus === 'completed') $updates['completed_at'] = now();
 
-            Order::withoutObservers(fn () => $order->update($updates));
+            // Normal update — OrderObserver fires notification automatically
+            $order->update($updates);
 
             $label = [
                 'processing' => 'Sedang Diproses',
@@ -235,14 +243,10 @@ class AdminController extends Controller
                 'status_title' => $label,
                 'description'  => 'Status diperbarui melalui notifikasi manual.',
             ]);
-
-            // Credit affiliate commission on completion
-            if ($newStatus === 'completed') {
-                $this->notificationService->notifyAffiliateBalanceCredited($order->fresh());
-            }
+        } else {
+            // Non-status-changing events (e.g. payment.confirmed) → send manually
+            $this->notificationService->notifyOrderStatus($order, $event);
         }
-
-        $this->notificationService->notifyOrderStatus($order->fresh(), $event);
 
         return back()->with('success', 'Notifikasi terkirim dan status pesanan diperbarui.');
     }
