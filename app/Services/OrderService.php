@@ -150,7 +150,7 @@ class OrderService
                 'item_details' => $midtransItems,
                 'callbacks' => [
                     'finish'   => url('/checkout/success?order_number=' . $order->order_number),
-                    'unfinish' => url('/checkout/failed'),
+                    'unfinish' => url('/checkout'),   // user left without paying → back to checkout
                     'error'    => url('/checkout/failed'),
                 ],
             ]);

@@ -8,6 +8,21 @@
         <div class="alert alert-info">{{ session('info') }}</div>
     @endif
 
+    @if(session('payment_pending'))
+    @php $pending = session('payment_pending'); @endphp
+    <div class="alert py-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2"
+         style="background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.35);border-radius:10px;color:var(--tdr-gold)">
+        <div>
+            <i class="bi bi-clock-history me-1"></i>
+            <strong>Pembayaran belum selesai</strong> &mdash; Order <code>{{ $pending['order_number'] }}</code> masih menunggu pembayaran.
+        </div>
+        <a href="{{ $pending['snap_url'] }}" class="btn btn-sm fw-semibold"
+           style="background:var(--tdr-gold);color:#0b0b0f;border-radius:6px;white-space:nowrap">
+            <i class="bi bi-credit-card me-1"></i>Lanjutkan Pembayaran
+        </a>
+    </div>
+    @endif
+
     @if($errors->has('general'))
         <div class="alert alert-danger">{{ $errors->first('general') }}</div>
     @endif

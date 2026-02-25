@@ -142,34 +142,48 @@ class CheckoutController extends Controller
             return back()->withErrors(['general' => 'Gagal membuat pesanan: ' . $e->getMessage()]);
         }
 
-        // Clear cart and affiliate cookie after successful order
-        session()->forget('cart');
-        Cookie::expire('affiliate_ref');
+        // Do NOT clear cart here — cart is only cleared after payment is confirmed in success()
+        // This ensures the cart is intact if the user leaves Midtrans without paying.
 
         return redirect()->away($order->midtrans_snap_token);
     }
 
     /** GET /checkout/success */
-    public function success(Request $request): View
+    public function success(Request $request): View|RedirectResponse
     {
-        $order = null;
-
         $orderNumber = $request->query('order_number') ?? $request->query('order_id');
 
-        if ($orderNumber) {
-            $order = Order::where('order_number', $orderNumber)
-                ->where('customer_id', $request->user()->id)
-                ->with('items')
-                ->first();
+        if (! $orderNumber) {
+            return redirect()->route('orders.index');
         }
 
-        // Auto-verify: if order still unpaid, check Midtrans API directly
-        if ($order && ! $order->payment_verified_at) {
-            $status = $this->orderService->checkAndVerifyPayment($order);
-            if ($status) {
-                $order->refresh();
-            }
+        $order = Order::where('order_number', $orderNumber)
+            ->where('customer_id', $request->user()->id)
+            ->with('items')
+            ->first();
+
+        if (! $order) {
+            return redirect()->route('orders.index');
         }
+
+        // Auto-verify: check Midtrans API if not yet confirmed
+        if (! $order->payment_verified_at) {
+            $this->orderService->checkAndVerifyPayment($order);
+            $order->refresh();
+        }
+
+        // If STILL not verified (pending / user left without paying) → back to checkout
+        if (! $order->payment_verified_at) {
+            return redirect()->route('checkout.form')
+                ->with('payment_pending', [
+                    'order_number' => $order->order_number,
+                    'snap_url'     => $order->midtrans_snap_token,
+                ]);
+        }
+
+        // Payment confirmed — now safe to clear cart and affiliate cookie
+        session()->forget('cart');
+        Cookie::expire('affiliate_ref');
 
         return view('checkout.success', compact('order'));
     }
