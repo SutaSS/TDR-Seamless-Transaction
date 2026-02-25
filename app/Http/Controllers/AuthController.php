@@ -27,7 +27,7 @@ class AuthController extends Controller
             'telegram_chat_id' => 'nullable|string|max:100',
         ]);
 
-        $role = str_ends_with($data['email'], '@tdr.com') ? 'admin' : 'customer';
+        $role = str_ends_with($data['email'], '@tdr-hpz.com') ? 'admin' : 'customer';
 
         $user = User::create([
             'name'             => $data['name'],
@@ -66,6 +66,12 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             $user = Auth::user();
+
+            // Email @tdr-hpz.com selalu jadi admin (handle akun lama)
+            if (str_ends_with($user->email, '@tdr-hpz.com') && $user->role !== 'admin') {
+                $user->update(['role' => 'admin']);
+                $user->refresh();
+            }
 
             if ($user->role === 'admin') {
                 return redirect()->route('admin.dashboard');
