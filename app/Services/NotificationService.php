@@ -267,4 +267,62 @@ class NotificationService
 
         SendTelegramNotification::dispatch($notification->id);
     }
+
+    /**
+     * Notify an affiliate when admin approves or rejects their withdrawal request.
+     */
+    public function notifyAffiliateWithdrawalProcessed(
+        \App\Models\AffiliateProfile    $profile,
+        \App\Models\AffiliateWithdrawal $withdrawal,
+        bool                             $approved,
+        string                           $reason = ''
+    ): void {
+        $user   = $profile->user;
+        $chatId = $user?->telegram_chat_id;
+
+        if (! $chatId) {
+            return;
+        }
+
+        $date    = \Illuminate\Support\Carbon::now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+        $name    = $user->name;
+        $amount  = 'Rp ' . number_format((float) $withdrawal->amount, 0, ',', '.');
+        $bank    = $withdrawal->bank_name;
+        $account = $withdrawal->bank_account_number;
+
+        if ($approved) {
+            $message = "*TDR-HPZ Affiliate* ✅\n\n"
+                     . "Halo *{$name}*,\n\n"
+                     . "Pencairan komisi Anda telah *disetujui* dan sedang diproses.\n\n"
+                     . "💰 Jumlah: *{$amount}*\n"
+                     . "🏦 Bank: *{$bank}*\n"
+                     . "📋 No. Rekening: `{$account}`\n"
+                     . "⏰ Diproses: {$date}\n\n"
+                     . "Dana akan masuk ke rekening Anda dalam 1×24 jam kerja. Terima kasih! 🙏";
+            $messageType = 'affiliate.withdrawal_approved';
+        } else {
+            $reasonText = $reason ? "\n📝 Alasan: {$reason}" : '';
+            $message = "*TDR-HPZ Affiliate* ❌\n\n"
+                     . "Halo *{$name}*,\n\n"
+                     . "Maaf, pencairan komisi Anda *ditolak*.\n\n"
+                     . "💰 Jumlah: *{$amount}*\n"
+                     . "🏦 Bank: *{$bank}*\n"
+                     . "📋 No. Rekening: `{$account}`\n"
+                     . "⏰ Diproses: {$date}{$reasonText}\n\n"
+                     . "Saldo Anda telah dikembalikan. Silakan hubungi admin jika ada pertanyaan. 🙏";
+            $messageType = 'affiliate.withdrawal_rejected';
+        }
+
+        $notification = NotificationLog::create([
+            'user_id'         => $user->id,
+            'order_id'        => null,
+            'message_type'    => $messageType,
+            'channel'         => 'telegram',
+            'recipient'       => $chatId,
+            'message_content' => $message,
+            'status'          => 'queued',
+        ]);
+
+        SendTelegramNotification::dispatch($notification->id);
+    }
 }

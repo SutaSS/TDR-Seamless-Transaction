@@ -11,7 +11,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TelegramSetupController;
 use Illuminate\Support\Facades\Route;
 
-// Homepage — capture referral jika ada ?ref=CODE
+// Homepage
 Route::get('/', function (\Illuminate\Http\Request $request) {
     if ($request->has('ref')) {
         return app(AffiliateController::class)->captureReferral($request);
@@ -96,6 +96,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/affiliates',            [AdminController::class, 'affiliates'])->name('affiliates');
         Route::post('/affiliates/{affiliate}/approve', [AdminController::class, 'approveAffiliate'])->name('affiliates.approve');
         Route::post('/affiliates/{affiliate}/reject',  [AdminController::class, 'rejectAffiliate'])->name('affiliates.reject');
+        Route::get('/withdrawals',                          [AdminController::class, 'withdrawals'])->name('withdrawals');
+        Route::post('/withdrawals/{withdrawal}/approve',    [AdminController::class, 'approveWithdrawal'])->name('withdrawals.approve');
+        Route::post('/withdrawals/{withdrawal}/reject',     [AdminController::class, 'rejectWithdrawal'])->name('withdrawals.reject');
         Route::get('/notifications',         [AdminController::class, 'notifications'])->name('notifications');
     });
 });

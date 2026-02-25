@@ -6,16 +6,7 @@ use App\Models\Order;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
-/**
- * Auto-advance order statuses based on elapsed time.
- *
- * Timing (adjustable):
- *   verified    →  processing : 1 min  after payment_verified_at
- *   processing  →  shipped    : 5 min  after updated_at
- *   shipped     →  completed  : 15 min after updated_at
- *
- * Catatan: status valid di tabel orders: pending, verified, processing, shipped, completed, cancelled.
- */
+
 class AdvanceOrderStatus extends Command
 {
     protected $signature   = 'orders:advance-status';

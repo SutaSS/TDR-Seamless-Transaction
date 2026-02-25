@@ -384,6 +384,13 @@
             <a href="{{ route('admin.affiliates') }}" class="nav-link {{ request()->routeIs('admin.affiliates') ? 'active' : '' }}">
                 <i class="bi bi-people"></i> Affiliates
             </a>
+            @php $pendingWithdrawals = \App\Models\AffiliateWithdrawal::pending()->count(); @endphp
+            <a href="{{ route('admin.withdrawals') }}" class="nav-link {{ request()->routeIs('admin.withdrawals*') ? 'active' : '' }}">
+                <i class="bi bi-cash-stack"></i> Cairkan Dana
+                @if($pendingWithdrawals > 0)
+                    <span class="badge rounded-pill ms-auto" style="background:rgba(245,158,11,0.2);color:#fbbf24;font-size:.68rem">{{ $pendingWithdrawals }}</span>
+                @endif
+            </a>
             <a href="{{ route('admin.notifications') }}" class="nav-link {{ request()->routeIs('admin.notifications') ? 'active' : '' }}">
                 <i class="bi bi-bell"></i> Notifikasi
             </a>

@@ -90,9 +90,21 @@
     </div>
 
     {{-- Pagination --}}
-    <div class="mt-4 d-flex justify-content-center">
-        {{ $products->appends(['search' => $search])->links() }}
+    @if($products->hasPages())
+    <div class="d-flex justify-content-center align-items-center gap-3 mt-4">
+        @if($products->onFirstPage())
+            <span class="btn btn-sm btn-outline-secondary disabled">‹ Sebelumnya</span>
+        @else
+            <a href="{{ $products->previousPageUrl() }}&search={{ $search }}" class="btn btn-sm btn-outline-secondary">‹ Sebelumnya</a>
+        @endif
+        <span class="text-muted small">Halaman {{ $products->currentPage() }} / {{ $products->lastPage() }}</span>
+        @if($products->hasMorePages())
+            <a href="{{ $products->nextPageUrl() }}&search={{ $search }}" class="btn btn-sm btn-outline-secondary">Berikutnya ›</a>
+        @else
+            <span class="btn btn-sm btn-outline-secondary disabled">Berikutnya ›</span>
+        @endif
     </div>
+    @endif
     @endif
 </div>
 

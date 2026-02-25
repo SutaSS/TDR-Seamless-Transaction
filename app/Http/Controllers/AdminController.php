@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\AffiliateProfile;
+use App\Models\AffiliateWithdrawal;
 use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\TrackingLog;
+use App\Services\AffiliateService;
 use App\Services\NotificationService;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +21,7 @@ class AdminController extends Controller
     public function __construct(
         protected NotificationService $notificationService,
         protected OrderService        $orderService,
+        protected AffiliateService    $affiliateService,
     ) {}
 
     // Auth
@@ -265,6 +268,81 @@ class AdminController extends Controller
             ->paginate(30);
 
         return view('admin.notifications', compact('notifications'));
+    }
+
+    // ─── Affiliate Withdrawals ──────────────────────────────────────────────
+
+    /** GET /admin/withdrawals */
+    public function withdrawals(Request $request): View
+    {
+        $this->ensureAdmin();
+
+        $status      = $request->get('status', 'pending');
+        $withdrawals = AffiliateWithdrawal::with(['affiliate.affiliateProfile'])
+            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+            ->latest()
+            ->paginate(20)
+            ->appends(['status' => $status]);
+
+        $pendingCount = AffiliateWithdrawal::pending()->count();
+
+        return view('admin.withdrawals', compact('withdrawals', 'status', 'pendingCount'));
+    }
+
+    /** POST /admin/withdrawals/{withdrawal}/approve */
+    public function approveWithdrawal(AffiliateWithdrawal $withdrawal): RedirectResponse
+    {
+        $this->ensureAdmin();
+
+        if ($withdrawal->status !== 'pending') {
+            return back()->with('error', 'Permintaan ini sudah diproses.');
+        }
+
+        $withdrawal->update([
+            'status'       => 'completed',
+            'processed_at' => now(),
+            'processed_by' => Auth::id(),
+        ]);
+
+        // Notify affiliate via Telegram
+        $profile = $withdrawal->affiliate->affiliateProfile ?? null;
+        if ($profile) {
+            $this->notificationService->notifyAffiliateWithdrawalProcessed($profile, $withdrawal, true);
+        }
+
+        return back()->with('success', 'Pencairan berhasil disetujui dan affiliate telah diberitahu.');
+    }
+
+    /** POST /admin/withdrawals/{withdrawal}/reject */
+    public function rejectWithdrawal(Request $request, AffiliateWithdrawal $withdrawal): RedirectResponse
+    {
+        $this->ensureAdmin();
+
+        if ($withdrawal->status !== 'pending') {
+            return back()->with('error', 'Permintaan ini sudah diproses.');
+        }
+
+        $reason = $request->input('rejection_reason', 'Ditolak oleh admin.');
+
+        // Refund the balance back to the affiliate profile
+        $profile = $withdrawal->affiliate->affiliateProfile ?? null;
+        if ($profile) {
+            $profile->increment('balance', $withdrawal->amount);
+        }
+
+        $withdrawal->update([
+            'status'           => 'rejected',
+            'processed_at'     => now(),
+            'processed_by'     => Auth::id(),
+            'rejection_reason' => $reason,
+        ]);
+
+        // Notify affiliate via Telegram
+        if ($profile) {
+            $this->notificationService->notifyAffiliateWithdrawalProcessed($profile, $withdrawal, false, $reason);
+        }
+
+        return back()->with('success', 'Pencairan ditolak dan saldo affiliate telah dikembalikan.');
     }
 
     // ─── Helper ────────────────────────────────────────────────────────────
