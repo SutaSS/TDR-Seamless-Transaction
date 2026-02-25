@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AffiliateClick;
 use App\Models\AffiliateProfile;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -53,6 +54,21 @@ class HomeController extends Controller
             // It will travel as a hidden input in the add-to-cart form on this page.
             if (! $affiliate) {
                 $affCode = null; // invalid code, clear it
+            }
+        }
+
+        // Record click once per session per affiliate+product combination
+        if ($affiliate) {
+            $sessionKey = 'aff_click_' . $affiliate->user_id . '_' . $product->id;
+            if (! session()->has($sessionKey)) {
+                AffiliateClick::create([
+                    'affiliate_id' => $affiliate->user_id,
+                    'ip_address'   => $request->ip(),
+                    'user_agent'   => substr($request->userAgent() ?? '', 0, 500),
+                    'referrer_url' => substr($request->headers->get('referer', ''), 0, 500),
+                    'clicked_at'   => now(),
+                ]);
+                session([$sessionKey => true]);
             }
         }
 
