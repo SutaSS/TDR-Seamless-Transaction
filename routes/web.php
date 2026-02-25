@@ -7,6 +7,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TelegramSetupController;
 use Illuminate\Support\Facades\Route;
 
 // Homepage — capture referral jika ada ?ref=CODE
@@ -29,6 +30,11 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// Telegram setup page — untuk user yang baru login/register tanpa chat_id
+Route::middleware('auth')->group(function () {
+    Route::get('/telegram/setup', [TelegramSetupController::class, 'show'])->name('telegram.setup');
+});
 
 // Profil — untuk user yang sudah login
 Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {

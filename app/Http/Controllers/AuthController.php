@@ -39,9 +39,10 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        // Tampilkan modal jika telegram belum dihubungkan
+        // Arahkan ke halaman setup Telegram jika belum punya chat_id
         if (empty($user->telegram_chat_id)) {
-            session()->flash('show_telegram_modal', true);
+            return redirect()->route('telegram.setup')
+                ->with('success', 'Akun berhasil dibuat. Selamat datang!');
         }
 
         return redirect()->intended(route('home'))
@@ -67,17 +68,17 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
-            // Tampilkan modal jika telegram belum dihubungkan
-            if (empty($user->telegram_chat_id)) {
-                session()->flash('show_telegram_modal', true);
-            }
-
             if ($user->role === 'admin') {
                 return redirect()->route('admin.dashboard');
             }
 
             if ($user->role === 'affiliate') {
                 return redirect()->route('affiliate.dashboard');
+            }
+
+            // Customer: arahkan ke setup Telegram jika belum terhubung
+            if (empty($user->telegram_chat_id)) {
+                return redirect()->route('telegram.setup');
             }
 
             return redirect()->intended(route('home'));
