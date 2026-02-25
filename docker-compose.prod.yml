@@ -1,0 +1,106 @@
+# WSL / staging overrides — tuned for 2 CPU / 2 GB RAM
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  # ── App (PHP-FPM) ─────────────────────────────────────────
+  app:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 192M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ── Queue Worker ──────────────────────────────────────────
+  worker:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 192M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ── Scheduler ─────────────────────────────────────────────
+  scheduler:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 96M
+
+  # ── Nginx ─────────────────────────────────────────────────
+  nginx:
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ── MySQL ─────────────────────────────────────────────────
+  mysql:
+    ports: [] # Tidak expose ke host di mode ini
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 448M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  # ── Redis Cache ───────────────────────────────────────────
+  redis-cache:
+    ports: []
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 112M
+
+  # ── Redis Queue ───────────────────────────────────────────
+  redis-queue:
+    ports: []
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 112M
+
+  # ── Prometheus ────────────────────────────────────────────
+  prometheus:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 128M
+
+  # ── Grafana ───────────────────────────────────────────────
+  grafana:
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 192M
