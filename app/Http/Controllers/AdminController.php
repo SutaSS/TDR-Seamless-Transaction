@@ -124,21 +124,18 @@ class AdminController extends Controller
         $this->ensureAdmin();
 
         $data = $request->validate([
-            'status'                => 'required|in:processing,shipped,completed,cancelled',
+            'status'                   => 'required|in:processing,shipped,completed,cancelled',
             'shipping_tracking_number' => 'nullable|string|max:100',
-            'shipping_courier'      => 'nullable|string|max:100',
-            'note'                  => 'nullable|string|max:500',
+            'note'                     => 'nullable|string|max:500',
         ]);
 
         $updates = ['status' => $data['status']];
 
         if ($data['status'] === 'shipped') {
             $updates['shipped_at'] = now();
-            if ($data['shipping_tracking_number']) {
+            // courier already stored on order — keep as-is; update resi if provided
+            if (! empty($data['shipping_tracking_number'])) {
                 $updates['shipping_tracking_number'] = $data['shipping_tracking_number'];
-            }
-            if ($data['shipping_courier']) {
-                $updates['shipping_courier'] = $data['shipping_courier'];
             }
         }
 
@@ -170,7 +167,7 @@ class AdminController extends Controller
         };
 
         if ($event) {
-            $this->notificationService->notifyOrderStatus($order->fresh(), $event);
+            $this->notificationService->notifyOrderStatus($order->fresh(), $event, $data['note'] ?? null);
         }
 
         return back()->with('success', 'Status pesanan berhasil diperbarui.');

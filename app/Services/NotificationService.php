@@ -13,7 +13,7 @@ class NotificationService
      * Fire a Telegram notification for an order event.
      * Creates a Notification record then dispatches the job.
      */
-    public function notifyOrderStatus(Order $order, string $event): void
+    public function notifyOrderStatus(Order $order, string $event, ?string $note = null): void
     {
         $user = $order->customer;
 
@@ -21,7 +21,7 @@ class NotificationService
             return;
         }
 
-        $message = $this->buildMessage($order, $event);
+        $message = $this->buildMessage($order, $event, $note);
 
         if (! $message) {
             return;
@@ -43,7 +43,7 @@ class NotificationService
     /**
      * Build the Telegram message text based on event type.
      */
-    private function buildMessage(Order $order, string $event): ?string
+    private function buildMessage(Order $order, string $event, ?string $note = null): ?string
     {
         $customer   = $order->customer;
         $name       = $customer?->name ?? 'Pelanggan';
@@ -71,16 +71,25 @@ class NotificationService
                 "🔗 [Lacak Pesanan]({$trackLink})\n\n" .
                 "Kami akan segera mengirimkan pesanan Anda. Nantikan informasi pengiriman selanjutnya!",
 
-            'order.shipped' =>
-                "*TDR-HPZ Store*, [{$date}]\n" .
-                "📦 *Pesanan Dikirim*\n\n" .
-                "Halo {$name},\n\n" .
-                "Pesanan *{$ordNum}* telah dikirim via *{$order->shipping_courier}*.\n" .
-                ($order->shipping_tracking_number
-                    ? "Nomor Resi: `{$order->shipping_tracking_number}`\n\n"
-                    : "\n") .
-                "🔗 [Lacak Pesanan]({$trackLink})\n\n" .
-                "Silakan pantau pengiriman Anda. Terima kasih! 🙏",
+            'order.shipped' => (function () use ($order, $ordNum, $name, $date, $trackLink, $note) {
+                $courierLabels = [
+                    'jne_reg'   => 'JNE Reguler',
+                    'jne_yes'   => 'JNE YES',
+                    'jnt_reg'   => 'J&T Reguler',
+                    'sicepat'   => 'SiCepat',
+                    'pos_biasa' => 'Pos Indonesia',
+                ];
+                $courier = $courierLabels[$order->shipping_courier] ?? strtoupper($order->shipping_courier ?? '-');
+                $resi    = $order->shipping_tracking_number;
+                $msg = "*TDR-HPZ Store*, [{$date}]\n"
+                     . "📦 *Pesanan Dikirim*\n\n"
+                     . "Halo {$name},\n\n"
+                     . "Pesanan *{$ordNum}* telah dikirim via *{$courier}*.\n";
+                if ($resi) $msg .= "Nomor Resi: `{$resi}`\n";
+                if ($note) $msg .= "\n📝 Catatan: {$note}\n";
+                $msg .= "\n🔗 [Lacak Pesanan]({$trackLink})\n\nSilakan pantau pengiriman Anda. Terima kasih! 🙏";
+                return $msg;
+            })(),
 
             'order.delivered' =>
                 "*TDR-HPZ Store*, [{$date}]\n" .

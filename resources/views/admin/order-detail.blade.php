@@ -95,6 +95,16 @@
 
         {{-- Update Status --}}
         @if($nextStatus)
+        @php
+            $courierLabels = [
+                'jne_reg'   => 'JNE Reguler',
+                'jne_yes'   => 'JNE YES',
+                'jnt_reg'   => 'J&T Reguler',
+                'sicepat'   => 'SiCepat',
+                'pos_biasa' => 'Pos Indonesia',
+            ];
+            $courierDisplay = $courierLabels[$order->shipping_courier] ?? strtoupper($order->shipping_courier ?? '-');
+        @endphp
         <div class="card mt-3">
             <div class="card-header"><strong>Update Status > {{ ucfirst($nextStatus) }}</strong></div>
             <div class="card-body">
@@ -104,12 +114,13 @@
                     @if($nextStatus === 'shipped')
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Nomor Resi <span style="color:var(--adm-red)">*</span></label>
-                                <input type="text" name="shipping_tracking_number" class="form-control" placeholder="JNE123456789" required>
+                                <label class="form-label">Nomor Resi <span class="text-muted fw-normal">(opsional)</span></label>
+                                <input type="text" name="shipping_tracking_number" class="form-control" placeholder="JNE123456789">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Ekspedisi</label>
-                                <input type="text" name="shipping_courier" class="form-control" placeholder="JNE / J&T / SiCepat">
+                                <input type="text" class="form-control" value="{{ $courierDisplay }}" readonly
+                                       style="background:rgba(255,255,255,.04);cursor:default">
                             </div>
                         </div>
                     @endif
