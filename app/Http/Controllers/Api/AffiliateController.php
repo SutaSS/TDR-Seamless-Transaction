@@ -13,6 +13,7 @@ use App\Services\AffiliateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class AffiliateController extends Controller
 {
@@ -23,7 +24,50 @@ class AffiliateController extends Controller
         return $request->user()->affiliateProfile;
     }
 
-    /** GET /api/affiliate/dashboard */
+  /** POST /api/affiliate/register */
+  public function register(Request $request): JsonResponse {
+    $user = $request->user();
+
+    if ($user->affiliateProfile) {
+      return response()->json([
+        'message' => 'Anda sudah terdaftar sebagai affiliate.',
+        'profile' => new AffiliateProfileResource($user->affiliateProfile),
+      ], 422);
+    }
+
+    $data = $request->validate([
+      'bank_name'           => ['required', 'string', 'max:100'],
+      'bank_account_number' => ['required', 'string', 'max:50'],
+      'bank_account_holder' => ['required', 'string', 'max:255'],
+    ]);
+
+    // Generate unique referral code
+    do {
+      $code = strtoupper(Str::random(8));
+    } while (AffiliateProfile::where('referral_code', $code)->exists());
+
+    $profile = AffiliateProfile::create([
+      'user_id'             => $user->id,
+      'referral_code'       => $code,
+      'commission_rate'     => 10,
+      'balance'             => 0,
+      'total_earned'        => 0,
+      'status'              => 'pending',
+      'bank_name'           => $data['bank_name'],
+      'bank_account_number' => $data['bank_account_number'],
+      'bank_account_holder' => $data['bank_account_holder'],
+    ]);
+
+    // Update user role to affiliate
+    $user->update(['role' => 'affiliate']);
+
+    return response()->json([
+      'message' => 'Pendaftaran affiliate berhasil! Tunggu persetujuan admin.',
+      'profile' => new AffiliateProfileResource($profile),
+    ], 201);
+  }
+
+  /** GET /api/affiliate/dashboard */
     public function dashboard(Request $request): JsonResponse
     {
         $affiliateProfile = $this->getAffiliateProfile($request);

@@ -11,6 +11,7 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -24,10 +25,11 @@ class AuthController extends Controller
         }
 
         $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role'     => $data['role'],
+      'name'             => $data['name'],
+      'email'            => $data['email'],
+      'password'         => Hash::make($data['password']),
+      'role'             => $data['role'],
+      'telegram_chat_id' => $data['telegram_chat_id'] ?? null,
         ]);
 
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -102,7 +104,28 @@ class AuthController extends Controller
         return response()->json(['message' => 'Telegram berhasil dihubungkan.']);
     }
 
-    /** POST /api/logout */
+  /** PUT /api/user/password */
+  public function updatePassword(Request $request): JsonResponse {
+    $request->validate([
+      'current_password' => ['required', 'string'],
+      'password'         => ['required', 'confirmed', Password::min(8)],
+    ]);
+
+    if (! Hash::check($request->current_password, $request->user()->password)) {
+      return response()->json([
+        'message' => 'Password lama tidak sesuai.',
+        'errors'  => ['current_password' => ['Password lama tidak sesuai.']],
+      ], 422);
+    }
+
+    $request->user()->update([
+      'password' => Hash::make($request->password),
+    ]);
+
+    return response()->json(['message' => 'Password berhasil diubah.']);
+  }
+
+  /** POST /api/logout */
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
