@@ -152,28 +152,47 @@ class OrderService
     public function verifyPayment(Order $order, string $transactionId): void
     {
         $commission = null;
+        $processed  = false;
 
-        DB::transaction(function () use ($order, $transactionId, &$commission) {
-            $order->update([
+        DB::transaction(function () use ($order, $transactionId, &$commission, &$processed) {
+            // Lock row to prevent race condition (webhook + success page hitting simultaneously)
+            $locked = Order::where('id', $order->id)
+                ->whereNull('payment_verified_at')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $locked) {
+                // Already processed by another request
+                return;
+            }
+
+            $locked->update([
                 'status'                  => 'verified',
                 'midtrans_transaction_id' => $transactionId,
                 'payment_verified_at'     => now(),
             ]);
 
             TrackingLog::create([
-                'order_id'     => $order->id,
+                'order_id'     => $locked->id,
                 'status_title' => 'Pembayaran Dikonfirmasi',
                 'description'  => 'Pembayaran telah diverifikasi via Midtrans.',
             ]);
 
             // Earn affiliate commission inside transaction so balance is atomic
-            if ($order->affiliate_id) {
-                $commission = $this->affiliate->recordCommission($order);
+            if ($locked->affiliate_id) {
+                $commission = $this->affiliate->recordCommission($locked);
                 if ($commission) {
                     $this->affiliate->earnCommission($commission);
                 }
             }
+
+            $processed = true;
         });
+
+        // Only send notifications if this request actually processed the payment
+        if (! $processed) {
+            return;
+        }
 
         $freshOrder = $order->fresh();
 
