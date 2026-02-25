@@ -95,6 +95,11 @@ class OrderService
                     'quantity' => $qty,
                     'name'     => mb_substr($product->name, 0, 50),
                 ]],
+                'callbacks' => [
+                    'finish'   => url('/checkout/success?order_number=' . $order->order_number),
+                    'unfinish' => url('/checkout/failed'),
+                    'error'    => url('/checkout/failed'),
+                ],
             ]);
 
             $order->update(['midtrans_snap_token' => $snapUrl]);
@@ -110,11 +115,45 @@ class OrderService
     }
 
     /**
+     * Check payment status from Midtrans API and verify if settled.
+     * Used when customer is redirected back to success page.
+     * Returns true if payment was verified, false otherwise.
+     */
+    public function checkAndVerifyPayment(Order $order): bool
+    {
+        if ($order->payment_verified_at) {
+            return true; // Already verified
+        }
+
+        $result = $this->midtrans->getTransactionStatus($order->order_number);
+
+        if (! $result) {
+            return false;
+        }
+
+        $status      = $result['transaction_status'] ?? '';
+        $fraudStatus = $result['fraud_status'] ?? '';
+        $txId        = $result['transaction_id'] ?? ('MIDTRANS-' . now()->timestamp);
+
+        $isSettled = in_array($status, ['settlement', 'capture'])
+            && ($fraudStatus === 'accept' || $fraudStatus === '');
+
+        if ($isSettled) {
+            $this->verifyPayment($order, $txId);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Confirm payment from Midtrans webhook, transition order to verified.
      */
     public function verifyPayment(Order $order, string $transactionId): void
     {
-        DB::transaction(function () use ($order, $transactionId) {
+        $commission = null;
+
+        DB::transaction(function () use ($order, $transactionId, &$commission) {
             $order->update([
                 'status'                  => 'verified',
                 'midtrans_transaction_id' => $transactionId,
@@ -127,7 +166,7 @@ class OrderService
                 'description'  => 'Pembayaran telah diverifikasi via Midtrans.',
             ]);
 
-            // Immediately earn affiliate commission on payment verification
+            // Earn affiliate commission inside transaction so balance is atomic
             if ($order->affiliate_id) {
                 $commission = $this->affiliate->recordCommission($order);
                 if ($commission) {
@@ -136,6 +175,14 @@ class OrderService
             }
         });
 
-        $this->notification->notifyOrderStatus($order->fresh(), 'payment.confirmed');
+        $freshOrder = $order->fresh();
+
+        // Notify customer
+        $this->notification->notifyOrderStatus($freshOrder, 'payment.confirmed');
+
+        // Notify affiliate about earned commission
+        if ($commission) {
+            $this->notification->notifyAffiliateCommission($commission);
+        }
     }
 }

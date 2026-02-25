@@ -37,6 +37,33 @@ class MidtransService
     }
 
     /**
+     * Get transaction status from Midtrans API.
+     * Returns the status string: settlement, pending, cancel, expire, etc.
+     */
+    public function getTransactionStatus(string $orderId): ?array
+    {
+        $baseUrl = $this->isProduction
+            ? 'https://api.midtrans.com/v2'
+            : 'https://api.sandbox.midtrans.com/v2';
+
+        try {
+            $response = Http::withBasicAuth($this->serverKey, '')
+                ->get("{$baseUrl}/{$orderId}/status");
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('MidtransService::getTransactionStatus error', [
+                'order_id' => $orderId,
+                'error'    => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
      * Create a Midtrans Snap payment token and return the redirect_url.
      *
      * @param  array  $params  Midtrans transaction params
